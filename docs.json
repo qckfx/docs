@@ -27,12 +27,12 @@
       "anchors": [
         {
           "anchor": "Agent SDK Changelog",
-          "href": "https://github.com/EarlywormTeam/sdk-agent/releases",
+          "href": "https://github.com/qckfx/agent-sdk/releases",
           "icon": "scroll"
         },
         {
-          "anchor": "Copilot Changelog",
-          "href": "https://github.com/EarlywormTeam/copilot/releases",
+          "anchor": "Assist Changelog",
+          "href": "https://github.com/qckfx/assist/releases",
           "icon": "scroll"
         },
         {
