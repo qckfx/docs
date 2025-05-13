@@ -1,11 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "theme": "willow",
+  "name": "qckfx",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#1B9847",
+    "light": "#22C15A",
+    "dark": "#0C672C"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -17,39 +17,7 @@
             "group": "Get Started",
             "pages": [
               "index",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Essentials",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/settings",
-              "essentials/navigation",
-              "essentials/reusable-snippets"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API Reference",
-        "groups": [
-          {
-            "group": "API Documentation",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint Examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "quickstart"
             ]
           }
         ]
@@ -58,19 +26,24 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "Agent SDK Changelog",
+          "href": "https://github.com/EarlywormTeam/sdk-agent/releases",
+          "icon": "scroll"
         },
         {
-          "anchor": "Community",
-          "href": "https://mintlify.com/community",
-          "icon": "slack"
+          "anchor": "Copilot Changelog",
+          "href": "https://github.com/EarlywormTeam/copilot/releases",
+          "icon": "scroll"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Background Agents Changelog",
+          "href": "https://qckfx.com/changelog",
+          "icon": "scroll"
+        },
+        {
+          "anchor": "Reference",
+          "href": "https://docs.qckfx.com/reference/introduction",
+          "icon": "code"
         }
       ]
     }
@@ -83,20 +56,20 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:chris.wood@qckfx.com"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://app.qckfx.com"
     }
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "x": "https://x.com/qckfx_",
+      "github": "https://github.com/qckfx",
+      "linkedin": "https://linkedin.com/company/qckfx"
     }
   }
 }
