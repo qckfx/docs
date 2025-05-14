@@ -17,7 +17,25 @@
             "group": "Get Started",
             "pages": [
               "get-started/index",
-              "get-started/quickstart"
+              "get-started/quickstart",
+              "get-started/assist"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/agent",
+              "concepts/environment",
+              "concepts/session",
+              "concepts/trigger"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "components/agent-sdk",
+              "components/assist",
+              "components/background-agents"
             ]
           }
         ]
