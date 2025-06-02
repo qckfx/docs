@@ -1,0 +1,74 @@
+---
+title: "Agent SDK"
+description: "The open-source qckfx Agent SDK is the fastest way to build an AI agent connected to your codebase."
+---
+
+You can build complex, state-of-the-art coding agents with just a json config using the qckfx Agent SDK.
+
+Just initialize with a json config specifying the LLM, system prompt, and tools, and then start sending queries to the agent:
+
+```typescript
+import { Agent } from '@qckfx/agent';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const agent = new Agent({
+	defaultModel: 'anthropic/claude-sonnet-4',
+	systemPrompt: 'You are a helpful AI coding agent with access to a set of tools to accomplish the tasks given to you by the user.'
+});
+
+const { response,  } = await agent.processQuery('What does this repository do?');
+console.log('Agent response: ', response);
+
+const { response: nextResponse } = await agent.processQuery('What are the key files in this repository?', sessionState);
+console.log('Agent response: ', nextResponse);
+```
+
+## Why Use the Agent SDK?
+
+This is the fastest and most convenient way to get up and running with an AI coding agent.
+
+Additionally, the SDK comes with nice features:
+
+### 1. Built-In Tools
+
+By default, every agent created using the Agent SDK has access to all of the same tools available to Claude Code. That includes:
+
+- BashTool - access to bash shell for scripting
+- GlobTool - access to glob for searching
+- GrepTool - access to grep for searching
+- LSTool - access to ls for understanding directory structure
+- FileReadTool - ability to read files (including read offsets & paging)
+- FileEditTool - ability to edit files with search & replace
+- FileWriteTool - ability to write new files
+- [ThinkTool](https://www.anthropic.com/engineering/claude-think-tool) - allows the model to do self-reflection on its own tokens
+- BatchTool - allows batching of many tools in one function call
+- SubAgentTool (beta) - allows use of a sub-agent for specified tasks
+
+### 2. Dynamic System Prompts
+
+We augment the system prompt you define with the repository's git status, recent git history, and directory tree so that your agent is aware of what exists in the directory and what has been happening recently in the repository. This is similar to how Claude Code works. If you're interested, we wrote more about it on [our blog](https://qckfx.com/blog/some-cool-things-i-learned-about-how-ai-coding-agents-work).
+
+### 3. User Interrupt Support
+
+The user or system can interrupt the agent at any time and cause it to abort its current task. Regardless of when the interrupt arrives, the agent will handle it gracefully and will not crash or corrupt your context window. This is important and harder than it sounds because LLMs are very particular about the ordering of messaging, especially around tool calls.
+
+### 4. Streaming Updates
+
+The SDK issues streaming updates as the agent works. You can listen to these through callbacks that you set at initialization or by dynamically attaching event listeners after the agent has been initialized.
+
+### 5. User Permissions
+
+Requests for user permission are baked into the agent. This can be controlled granularly at the tool definition level or globally. You have three options globally: normal, fast-edit mode, and dangerous mode. Fast-edit allows writing files without any approval, but bash scripts still require approval. Dangerous mode is designed for scripting and background agent runs where there is no human to moderate. It's critical that dangerous only be used when the agent's commands are executed in a secure, sandboxed environment.
+
+### 6. Checkpoints
+
+You can rollback the chat to any previous message, and the underlying environment will update as well, undoing all tool calls that happened after the target message.
+
+## LLM Use
+
+The Agent SDK uses OpenAI's SDK to connect to LLM providers using a configurable base url and api key.
+
+The suggested way to use the SDK is with [OpenRouter](https://openrouter.ai/docs/quickstart) or [LiteLLM](https://docs.litellm.ai/docs/simple_proxy).
+
+Another option is to directly use a foundation model or inference provider's URL as the LLM_BASE_URL environment variable (e.g., https://api.openai.com/v1/, https://api.anthropic.com/v1/, https://generativelanguage.googleapis.com/v1beta/openai/), and passing in your key as the LLM_API_KEY.

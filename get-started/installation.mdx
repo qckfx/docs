@@ -1,0 +1,76 @@
+---
+title: "Installing qckfx"
+description: "Install qckfx and get started on your first task in just one minute. "
+---
+
+### System Requirements
+
+Operating systems
+
+- macOS 10.15 (Catalina) or newer
+- Ubuntu 20.04 / Debian 11 or newer
+- Windows 10 / 11 – needs Git-Bash or WSL for the shell-based tools
+
+Hardware
+
+- 4 GB RAM minimum
+
+Software
+
+- Node.js 18 or newer (required)
+- git 2.23\+ (optional – repo features)
+- GitHub or GitLab CLI for PR workflows (optional - post pull requests & read/create issues)
+- ripgrep rg (optional – faster local search)
+
+Network
+
+- Internet connection (model API calls, remote execution)
+
+Location
+
+- Must be in a country where your LLM provider and qckfx endpoints are accessible
+
+<Note>
+  ### Windows Specifics & Troubleshooting
+
+  The CLI itself runs on native Windows Node, but shell-based tools need a Unix layer:
+
+  1. **Install a Unix layer**
+     - Recommended – enable **WSL** with Ubuntu 20.04\+
+     - Alternative – install [Git for Windows](https://gitforwindows.org/) (ships Bash, `grep`, `find`, …)
+  2. **Ensure WSL uses Linux Node/npm**
+
+     ```
+     which node   # should print /usr/bin/node (not /mnt/c/…)
+     which npm
+     ```
+  3. **Common issues**
+
+  _“Unsupported platform” or epoll errors while installing_
+
+  ```
+  npm config set os linux
+  npm install -g @qckfx/agent --force --no-os-check   # no sudo
+  ```
+
+  _exec: bash: not found or messages about grep, find, head_ → POSIX utilities missing. Install Git-Bash or use WSL and ensure they’re on PATH.
+
+  _exec: node: not found when running qckfx_ → Windows Node precedes Linux Node on PATH inside WSL. Install Node via apt or nvm inside WSL and make sure /usr/bin/node comes first.
+</Note>
+
+### Pre-install checklist
+
+- Node 18\+ (`node -v`)
+- On Windows: WSL **or** Git-Bash present (`bash --version`)
+- Environment variables set: `LLM_API_KEY` and `LLM_BASE_URL` (i.e. https://api.anthropic.com/v1/)
+
+### Install & Run
+
+```bash
+npm install -g @qckfx/agent          # one-time global install
+qckfx "Hello, world!"                # run a prompt
+```
+
+<Warning>
+  Do NOT use `sudo npm install -g` as this can lead to permission issues and security risks.
+</Warning>

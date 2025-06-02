@@ -1,1 +1,118 @@
-A
+---
+title: "What is qckfx?"
+description: "qckfx is an open-source agentic coding tool."
+---
+
+qckfx (pronounced "quick fix") is an open-source alternative to tools like Claude Code and Codex CLI. It understands your codebase and helps you code faster through natural language commands, with the flexibility to use any LLM provider and full control over system prompts and tool configurations.
+
+```
+npm install -g @qckfx/agent
+```
+
+qckfx's key capabilities include:
+
+- Editing files and fixing bugs across your codebase
+- Answering questions about your code's architecture and logic
+- Executing and fixing tests, linting, and other commands
+- Searching through git history, resolving merge conflicts, and creating commits and PRs
+- Works with any LLM provider that offers an OpenAI compatible API (OpenAI, Anthropic, Google Gemini, Together AI, Groq, OpenRouter, LiteLLM, etc.)
+
+## Why qckfx?
+
+qckfx works as a CLI Unix utility, operating directly in your terminal to understand your project context and take real actions. Unlike many other AI coding tools, qckfx learns about your codebase dynamically through agentic exploration - navigating directories, examining git history, and exploring code like a human developer would, with no upfront indexing required.
+
+**Key differentiators:**
+
+- **Open source**: Full transparency and community-driven development
+- **Provider flexibility**: Support for any LLM provider with OpenAI-compatible APIs
+- **Customizable agents**: Complete control over system prompts, tool configurations, and model selection
+- **No performance overhead**: Works with projects of all sizes without indexing delays
+
+## Security & Privacy
+
+qckfx ensures:
+
+- **Direct API connection**: Your queries go directly to the URL you specify for the LLM provider
+- **Full environment control**: Easy to run locally or remotely in a Docker container or inside custom sandboxing solutions
+- **Dynamic understanding**: Maintains awareness of your entire project structure without using external databases or indexing software
+- **Takes action**: Performs real operations like editing files and creating commits
+
+## Getting Started
+
+**System Requirements:** Node.js 18\+
+
+qckfx works out of the box after installation. You'll just need to provide an LLM API key and base URL for your chosen provider. Follow our installation guide for detailed setup steps.
+
+**Current Status:** qckfx is in beta. The CLI provides a streamlined experience without mid-conversation steering options. For advanced use cases requiring runtime permission control, user interrupts, checkpointing, or rollbacks, we recommend using the SDK which provides extensive hooks into the agent system.
+
+## Quick Tour
+
+Here's what you can do with qckfx:
+
+### From questions to solutions in seconds
+
+```
+# Ask questions about your codebase
+qckfx
+> how does our authentication system work?
+
+# Fix issues across multiple files
+qckfx "fix the type errors in the auth module"
+```
+
+### **Understand unfamiliar code**
+
+```
+> what does the payment processing system do?
+> find where user permissions are checked
+> explain how the caching layer works
+```
+
+### **Automate Git operations**
+
+```
+> commit my changes
+> create a pr
+> which commit added tests for markdown back in December?
+> rebase on main and resolve any merge conflicts
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="rocket" href="/get-started/installation">
+    Install qckfx and get up and running
+  </Card>
+  <Card title="Github Actions" icon="robot" href="/applications/github-actions">
+    Setup qckfx in github actions for automated AI assistance
+  </Card>
+  <Card title="SDK" icon="code" href="/sdk/index">
+    Learn about how to embed qckfx into any javascript/typescript application
+  </Card>
+  <Card title="Configuration" icon="gear" href="/get-started/configuration">
+    Customize qckfx for your workflow
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+<CardGroup cols={2}>
+  <Card title="qckfx Tutorials" icon="graduation-cap" href="get-started/tutorials">
+    Step-by-step guides for common tasks
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/get-started/troubleshooting">
+    Solutions for common issues with qckfx
+  </Card>
+</CardGroup>
+
+## License and Data Usage
+
+qckfx is provided under the MIT license.
+
+#### **Feedback transcripts**
+
+If you choose to send us feedback about qckfx, such as transcripts of your usage, we may use that feedback to debug related issues and improve qckfx's functionality (e.g., to reduce the risk of similar bugs occurring in the future). We will not train generative models using this feedback.
+
+### **License**
+
+© qckfx, Inc 2025. All rights reserved. Open source under the MIT License - free to use, modify, and distribute.

@@ -16,21 +16,26 @@
           {
             "group": "Get Started",
             "pages": [
-              "get-started/index"
+              "get-started/index",
+              "get-started/installation.mdx"
             ]
           },
           {
             "group": "Concepts",
             "pages": [
-              "concepts/agent",
-              "concepts/environment",
-              "concepts/session"
+              "concepts/agent"
             ]
           },
           {
-            "group": "Components",
+            "group": "Applications",
             "pages": [
-              "components/agent-sdk"
+              "applications/github-actions.mdx"
+            ]
+          },
+          {
+            "group": "SDK",
+            "pages": [
+              "sdk/index.mdx"
             ]
           }
         ]
