@@ -1,5 +1,148 @@
 ---
-title: 'New file'
-description: 'Description of your new file.'
+title: "Configuration"
+description: "qckfx is highly configurable, allowing customization of system prompts, models, and tools."
 ---
 
+## Simple Configuration
+
+For quick and simple configuration, you can specify the model you would like qckfx to use from the command line:
+
+```bash
+qckfx -m openai/o3 "Create a plan for how to refactor auth.js"
+```
+
+You can change the model provider and your api key from the cli as well:
+
+```bash
+qckfx --url https://openrouter.ai/api/v1 --api-key my_openrouter_key -m google/gemini-2.5-pro-preview "Fix the login bug"
+```
+
+## Advanced Configuration
+
+You can define custom agents down to the model they use, their system prompt, and what tools they can access. To do so, write a JSON file like the following:
+
+```json
+// agent.json
+{
+    "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+    "defaultModel": "google/gemini-2.5-pro-preview",
+    "systemPrompt": "You are a helpful AI assistant specialized in code review. Focus 
+  on providing accurate code review comments using the available tools and the built-in github cli (gh).",
+    "tools": [
+      "bash",
+      "glob",
+      "grep",
+      "ls",
+      "file_read",
+      "file_edit",
+      "file_write",
+      "think",
+      "batch",
+    ]
+  }
+```
+
+Then pass this agent config file to qckfx:
+
+```bash
+qckfx -a agent.json "Review pull request #43"
+```
+
+### [Beta Feature] Sub-Agents
+
+You can define sub-agents for your primary agent. This is useful for cases where you want a cheaper model to browse the codebase and find relevant files, or one larger planning and review model with a cheaper implementation model. You can nest sub-agents as deeply as you like.
+
+**Example: o3 Planner with Sonnet-4 coder and Devstral browser**
+
+<CodeGroup>
+
+```json agent.json
+{
+    "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+    "defaultModel": "openai/o3",
+    "systemPrompt": "You are a helpful AI assistant specialized in software development. Focus 
+  on providing accurate and efficient solutions using the available tools. Prioritize using the
+  browser sub-agent to navigate and learn the codebase, and the coder sub-agent to implement the
+  plans you make. Be sure to review the work of the coder to ensure it matches your plan and
+  passes all tests, linters, etc.",
+    "tools": [
+      "bash",
+      "glob",
+      "grep",
+      "ls",
+      "file_read",
+      "file_edit",
+      "file_write",
+      "think",
+      "batch",
+      {
+        "name": "coder",
+        "configFile": "./sub-agents/coder.json"
+      },
+      {
+        "name": "browser",
+        "configFile": "./sub-agents/browser.json"
+      }
+    ],
+    "experimentalFeatures": {
+      "subAgents": true
+    }
+  }
+```
+
+
+```json sub-agents/coder.json
+{
+    "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+    "defaultModel": "anthropic/claude-sonnet-4",
+    "systemPrompt": "You are a helpful AI assistant specialized in software development. Focus 
+  on providing accurate and efficient solutions using the available tools. Prioritize using the
+  browser sub-agent to navigate and learn the codebase. Be sure to review your work to ensure 
+  it fulfills the plan you are given and passes all tests, linters, etc.",
+    "tools": [
+      "bash",
+      "glob",
+      "grep",
+      "ls",
+      "file_read",
+      "file_edit",
+      "file_write",
+      "think",
+      "batch",
+      {
+        "name": "browser",
+        "configFile": "./sub-agents/browser.json"
+      }
+    ],
+    "experimentalFeatures": {
+      "subAgents": true
+    }
+  }
+```
+
+
+```json sub-agents/browser.json
+{
+    "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+    "defaultModel": "mistralai/devstral-small",
+    "systemPrompt": "You are a helpful AI assistant specialized in navigating and understanding 
+  codebases. Use the tools at your disposal (ls, glob, grep, file_read) to browse the codebase 
+  and gather context necessary to fulfill the task you are given. Respond in great detail, 
+  including file names and line numbers where possible.",
+    "tools": [
+      "glob",
+      "grep",
+      "ls",
+      "file_read",
+      "batch"
+    ]
+  }
+```
+
+</CodeGroup>
+
+To run this agent, you would use a command like the following: 
+
+```bash
+qckfx -a agent.json "Add unit tests for the auth.ts file"
+```
