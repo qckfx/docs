@@ -17,7 +17,7 @@
             "group": "Get Started",
             "pages": [
               "get-started/index",
-              "get-started/installation.mdx"
+              "get-started/installation"
             ]
           },
           {
@@ -29,13 +29,13 @@
           {
             "group": "Applications",
             "pages": [
-              "applications/github-actions.mdx"
+              "applications/github-actions"
             ]
           },
           {
             "group": "SDK",
             "pages": [
-              "sdk/index.mdx"
+              "sdk/index"
             ]
           }
         ]
