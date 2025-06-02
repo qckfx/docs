@@ -16,9 +16,7 @@
           {
             "group": "Get Started",
             "pages": [
-              "get-started/index",
-              "get-started/quickstart",
-              "get-started/assist"
+              "get-started/index"
             ]
           },
           {
@@ -26,16 +24,13 @@
             "pages": [
               "concepts/agent",
               "concepts/environment",
-              "concepts/session",
-              "concepts/trigger"
+              "concepts/session"
             ]
           },
           {
             "group": "Components",
             "pages": [
-              "components/agent-sdk",
-              "components/assist",
-              "components/background-agents"
+              "components/agent-sdk"
             ]
           }
         ]
@@ -46,16 +41,6 @@
         {
           "anchor": "Agent SDK Changelog",
           "href": "https://github.com/qckfx/agent-sdk/releases",
-          "icon": "scroll"
-        },
-        {
-          "anchor": "Assist Changelog",
-          "href": "https://github.com/qckfx/assist/releases",
-          "icon": "scroll"
-        },
-        {
-          "anchor": "Background Agents Changelog",
-          "href": "https://qckfx.com/changelog",
           "icon": "scroll"
         },
         {
