@@ -18,7 +18,8 @@
             "pages": [
               "get-started/index",
               "get-started/installation",
-              "get-started/configuration"
+              "get-started/configuration",
+              "get-started/troubleshooting"
             ]
           },
           {

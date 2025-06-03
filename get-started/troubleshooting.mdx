@@ -1,5 +1,56 @@
 ---
-title: 'New file'
-description: 'Description of your new file.'
+title: "Troubleshooting"
+description: "Solutions for common issues with qckfx"
 ---
 
+## Common Installation Issues
+
+### Linux Permission Issues
+
+When installing qckfx with npm, you may encounter permission errors if your npm global prefix is not user writable (eg. `/usr`, or `/usr/local`).
+
+### Recommended Solution: Create a user-writable npm prefix
+
+The safest approach is to configure npm to use a directory within your home folder:
+
+```bash
+# First, save a list of your existing global packages for later migration
+npm list -g --depth=0 > ~/npm-global-packages.txt
+
+# Create a directory for your global packages
+mkdir -p ~/.npm-global
+
+# Configure npm to use the new directory path
+npm config set prefix ~/.npm-global
+
+# Note: Replace ~/.bashrc with ~/.zshrc, ~/.profile, or other appropriate file for your shell
+echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
+
+# Apply the new PATH setting
+source ~/.bashrc
+
+# Now reinstall Claude Code in the new location
+npm install -g @anthropic-ai/claude-code
+
+# Optional: Reinstall your previous global packages in the new location
+# Look at ~/npm-global-packages.txt and install packages you want to keep
+```
+
+This solution is recommended because it:
+
+- Avoids modifying system directory permissions
+- Creates a clean, dedicated location for your global npm packages
+- Follows security best practices
+
+## Agent Not Behaving Properly
+
+If you find that your agent is not behaving in the way you expect, we suggest you use the agent to improve itself\! 
+
+Start by asking it why it took the actions it did, then have it reflect on what system prompt changes could be made so that it would work better in the future. Have it directly update its own system prompt and use `qckfx -v path/to/system/prompt.json` to validate that the JSON is correct after edits are applied.
+
+## Getting More Help
+
+If you're running into other issues not covered here:
+
+1. Use `qckfx -b` to report a bug directly to the developers
+2. Check the [Github repository](https://github.com/qckfx/agent-sdk) for known issues

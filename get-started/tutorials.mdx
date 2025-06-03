@@ -1,5 +1,79 @@
 ---
-title: 'New file'
-description: 'Description of your new file.'
+title: "Tutorials"
+description: "Step-by-step tutorials for common workflows."
 ---
 
+## Table of Contents
+
+- [Understand new codebases](#understand-new-codebases)
+- [Fix bugs efficiently](#fix-bugs-efficiently)
+- Refactor code
+- Work with tests
+- Create pull requests
+- Handle documentation
+- Run parallel sessions with Git worktrees
+
+## Understand New Codebases
+
+**When to use: **You've just joined a new project and are learning its structure.
+
+1. Navigate to the project root directory
+
+   ```
+   cd /path/to/your/project
+   ```
+2. Start qckfx
+
+   ```
+   qckfx
+   ```
+3. Ask for a high-level overview
+
+   ```
+   > give me a high-level overview of this codebase
+   ```
+4. Dive deeper into specific components
+
+   ```
+   > create a mermaid chart for the data flow on auth
+   ```
+
+   ```
+   > what critical architectural decisions have been made here?
+   ```
+
+   ```
+   > describe how testing is managed for this project
+   ```
+
+**Tips:**
+
+- Ask about coding conventions and patterns used in the project
+- Request a glossary of project-specific terms
+- Request a list and breakdown of sub-modules
+- Start broad and then narrow with more detail
+
+## Fix Bugs Efficiently
+
+**When to use: **You have a failing test, an error message, or a stack trace and need to find and fix its source.
+
+1. Share the error with qckfx
+
+   ```
+   > I'm hitting an error when I run npm test
+   ```
+2. Ask for fix recommendations
+
+   ```
+   > suggest a few ways to fix the error in auth.ts, recommend one fix and give your rationale.
+   ```
+3. Apply the fix
+
+   ```
+   > update auth.ts to fix the off-by-one error you discovered.
+   ```
+
+**Tips:**
+
+- Tell qckfx how to reproduce the issue
+- Let qckfx know if the issue happens consistently or not
