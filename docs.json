@@ -25,7 +25,11 @@
           {
             "group": "Concepts",
             "pages": [
-              "concepts/agent"
+              "concepts/core-concepts",
+              "concepts/agent",
+              "concepts/sessions",
+              "concepts/tools",
+              "concepts/environments"
             ]
           },
           {
