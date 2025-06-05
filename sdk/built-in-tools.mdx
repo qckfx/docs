@@ -201,6 +201,50 @@ interface BashToolArgs {
 BashTool always requires user permission before execution for security reasons. This cannot be overridden even in fast-edit mode.
 </Warning>
 
+## Coding Tools
+
+### ClaudeTool 🚀
+
+**The ultimate coding companion** - Integrates Anthropic's Claude Code CLI for agentic coding assistance directly within your qckfx agents.
+
+<Info>
+**💰 Huge Cost Savings for Anthropic Users!** If you're already on Anthropic Pro or Max plan, Claude Code can save you considerable money compared to paying API fees. This is especially powerful for multi-model workflows where you can use o3 or Gemini for planning and then have Sonnet in Claude Code drive the implementation.
+</Info>
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Refactor the authentication module for better security');
+```
+
+```typescript Parameters
+interface ClaudeToolArgs {
+  query: string;  // Natural language prompt for coding tasks
+}
+```
+</CodeGroup>
+
+**Key Features:**
+- **Built-in by default** - Available on every agent unless explicitly disabled
+- **Automatic rate limit handling** - Gracefully falls back to other tools when rate limits are hit
+- **Multi-model workflows** - Perfect for o3/Gemini planning → Sonnet implementation patterns
+- **Headless operation** - Runs `claude -p "<prompt>"` in headless mode
+- **Cost optimization** - Leverages your existing Anthropic subscription
+
+**Perfect for:**
+- Code refactoring and optimization
+- Bug fixes and debugging
+- Feature implementation
+- Code review and analysis
+- Architecture improvements
+
+<Tip>
+The Claude tool is enabled by default on all agents. To disable it, explicitly list the tools you want in your agent configuration and exclude `claude` from the list.
+</Tip>
+
+<Warning>
+The Claude tool requires the `claude` CLI to be installed and configured on your system. It also requires permission for execution as it runs shell commands.
+</Warning>
+
 ## Advanced Tools
 
 ### BatchTool
@@ -282,7 +326,7 @@ Tools are organized into categories for better organization and permission manag
 
 - **FILE_OPERATIONS** - FileReadTool, FileEditTool, FileWriteTool, LSTool
 - **SEARCH_DISCOVERY** - GlobTool, GrepTool
-- **SHELL_EXECUTION** - BashTool
+- **SHELL_EXECUTION** - BashTool, ClaudeTool
 - **BATCH_OPERATIONS** - BatchTool
 - **REFLECTION** - ThinkTool
 - **SUB_AGENTS** - SubAgentTool
@@ -315,6 +359,12 @@ Use the appropriate permission mode for your use case. Fast-edit mode is ideal f
 - Use BashTool sparingly and only when necessary
 - Prefer specialized tools (FileReadTool, GlobTool, etc.) over shell commands
 - Always verify commands in safe environments before using dangerous mode
+
+### Coding Assistance
+- Use ClaudeTool for complex coding tasks that benefit from agentic assistance
+- Leverage multi-model workflows: o3/Gemini for planning, Claude Code for implementation
+- Take advantage of cost savings if you have an Anthropic Pro or Max subscription
+- Let the tool handle rate limiting automatically with graceful fallbacks
 
 ### Performance
 - Use BatchTool for multiple independent operations
