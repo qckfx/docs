@@ -1,0 +1,200 @@
+---
+title: "qckfx Command"
+description: "Complete reference for the main qckfx command and all its options"
+icon: "play"
+---
+
+The `qckfx` command is the primary interface for running AI agents from the command line. It supports various options for model selection, configuration, session management, and more.
+
+## Syntax
+
+```bash
+qckfx [options] [prompt...]
+```
+
+## Options
+
+### Agent Configuration
+
+<ParamField path="-a, --agent <file>" type="string">
+  Path to an agent definition JSON file. Supports smart path resolution:
+  - Direct file paths (relative or absolute)
+  - Auto-appends `.json` extension if missing
+  - Looks in `.qckfx/` directory for shorthand names
+</ParamField>
+
+<ParamField path="-m, --model <model>" type="string" default="gemini-2.5-pro">
+  Model to use for this execution. Overrides the default model in agent configuration.
+</ParamField>
+
+### API Configuration
+
+<ParamField path="--api-key <key>" type="string">
+  Override the `LLM_API_KEY` environment variable for this execution.
+</ParamField>
+
+<ParamField path="--url <baseUrl>" type="string">
+  Override the `LLM_BASE_URL` environment variable for this execution.
+</ParamField>
+
+### Session Management
+
+<ParamField path="-c, --continue" type="boolean">
+  Continue the most recent session for the current working directory. Sessions are automatically saved after each execution.
+</ParamField>
+
+### Sub-agents
+
+<ParamField path="--with-subagent <name...>" type="string[]">
+  Add one or more sub-agent tools for this execution. Sub-agents are resolved from `.qckfx/sub-agents/<name>.json`.
+</ParamField>
+
+### Validation
+
+<ParamField path="-v, --validate <file>" type="string">
+  Validate an agent definition file and exit. Does not execute the agent.
+</ParamField>
+
+### Prompt
+
+<ParamField path="[prompt...]" type="string">
+  The prompt to send to the agent. If not provided, the CLI will enter interactive mode.
+</ParamField>
+
+## Examples
+
+### Basic Usage
+
+```bash
+# Simple prompt
+qckfx "What files are in this directory?"
+
+# Multi-word prompt
+qckfx "Analyze the codebase and find potential security issues"
+```
+
+### Model Selection
+
+```bash
+# Use a specific model
+qckfx -m claude-sonnet-4 "Explain this code"
+
+# Use with OpenAI models
+qckfx -m gpt-4.1-mini "Write unit tests for this function"
+```
+
+### Agent Configurations
+
+```bash
+# Use a specific agent config
+qckfx -a security-agent.json "Scan for vulnerabilities"
+
+# Use shorthand (looks for .qckfx/security-agent.json)
+qckfx -a security-agent "Scan for vulnerabilities"
+
+# Validate configuration without running
+qckfx --validate security-agent.json
+```
+
+### Session Management
+
+```bash
+# Start a new conversation
+qckfx "Hello, I need help with my project"
+
+# Continue the previous conversation
+qckfx --continue "Can you also check the tests?"
+
+# Continue with a specific model
+qckfx -c -m claude-sonnet-4 "Use a more powerful model for this"
+```
+
+### Sub-agents
+
+```bash
+# Add a single sub-agent
+qckfx --with-subagent browser "Research the latest React patterns"
+
+# Add multiple sub-agents
+qckfx --with-subagent browser database "Analyze our data architecture"
+
+# Combine with agent config
+qckfx -a my-agent --with-subagent browser "Enhanced analysis with web research"
+```
+
+### API Configuration
+
+```bash
+# Override API key
+qckfx --api-key sk-your-key "Test with different credentials"
+
+# Use custom base URL (e.g., LiteLLM proxy)
+qckfx --url http://localhost:8001 "Use local proxy"
+
+# Combine both
+qckfx --api-key sk-key --url http://localhost:8001 "Custom setup"
+```
+
+## Interactive Mode
+
+When you run `qckfx` without a prompt, it enters interactive mode:
+
+```bash
+$ qckfx
+? Enter prompt › 
+```
+
+Type your prompt and press Enter to execute. The prompt cannot be empty.
+
+## Path Resolution
+
+The CLI uses smart path resolution for agent configurations:
+
+1. **Direct Path**: If the file exists as specified, use it
+2. **Auto Extension**: If missing `.json`, append it and check again
+3. **Convention Directory**: Look in `.qckfx/<name>.json`
+4. **Fallback**: Return the direct path (will cause error if not found)
+
+<CodeGroup>
+```bash Direct Path
+# Uses ./configs/my-agent.json
+qckfx -a ./configs/my-agent.json "prompt"
+```
+
+```bash Auto Extension
+# Uses ./my-agent.json (auto-appends .json)
+qckfx -a my-agent "prompt"
+```
+
+```bash Convention Directory
+# Uses ./.qckfx/security.json
+qckfx -a security "prompt"
+```
+</CodeGroup>
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Error (validation failed, execution error, etc.) |
+
+## Error Handling
+
+The CLI provides clear error messages for common issues:
+
+- **Invalid Configuration**: Shows validation errors with specific details
+- **Missing Files**: Reports which files couldn't be found
+- **API Errors**: Displays model provider error messages
+- **Session Errors**: Warns about session loading failures but continues
+
+<Warning>
+If session loading fails when using `--continue`, the CLI will warn you but start a fresh session instead of failing.
+</Warning>
+
+## Performance Tips
+
+- Use `--continue` to maintain context across multiple interactions
+- Leverage sub-agents for specialized tasks instead of complex prompts
+- Validate configurations with `--validate` before deployment
+- Use shorter model names when possible (e.g., `claude-sonnet-4` vs full model IDs)

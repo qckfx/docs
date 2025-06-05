@@ -1,0 +1,70 @@
+---
+title: "CLI Reference"
+description: "Complete reference for the qckfx command-line interface"
+icon: "terminal"
+---
+
+The qckfx CLI provides a powerful command-line interface for running AI agents, validating configurations, and managing sessions. This reference covers all available commands and options.
+
+## Installation
+
+The CLI is included with the `@qckfx/agent` package:
+
+```bash
+npm install -g @qckfx/agent
+```
+
+Or use it directly with npx:
+
+```bash
+npx @qckfx/agent "Your prompt here"
+```
+
+## Quick Start
+
+The simplest way to use the CLI is with a direct prompt:
+
+```bash
+# Basic usage
+qckfx "What files are in this directory?"
+
+# With a specific model
+qckfx -m claude-sonnet-4 "Analyze this codebase"
+
+# Using an agent configuration
+qckfx -a my-agent.json "List all TODOs in the code"
+```
+
+## Commands Overview
+
+The qckfx CLI provides several key functionalities:
+
+- **Agent Execution** - Run agents with prompts and configurations
+- **Configuration Validation** - Validate agent configuration files
+- **Session Management** - Continue previous conversations
+- **Sub-agent Integration** - Add sub-agents dynamically
+
+<Card title="Interactive Mode" icon="keyboard">
+  If you run `qckfx` without a prompt, it will enter interactive mode and ask you to enter your prompt.
+</Card>
+
+## Environment Variables
+
+The CLI respects several environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LLM_API_KEY` | API key for your model provider | Required |
+| `LLM_BASE_URL` | Base URL for your model provider | Provider default |
+
+<Tip>
+You can override these environment variables using the `--api-key` and `--url` command-line options.
+</Tip>
+
+## Next Steps
+
+- [qckfx Command](/cli/qckfx-command) - Detailed reference for the main command
+- [Configuration Validation](/cli/validation) - Validate agent configurations
+- [Session Management](/cli/sessions) - Work with persistent sessions
+- [Sub-agents](/cli/sub-agents) - Use sub-agent tools
+- [LiteLLM Setup](/cli/litellm-setup) - Set up LiteLLM proxy for model access

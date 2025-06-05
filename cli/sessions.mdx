@@ -1,0 +1,285 @@
+---
+title: "Session Management"
+description: "Understand how qckfx manages persistent conversation sessions"
+icon: "clock-rotate-left"
+---
+
+The qckfx CLI automatically manages conversation sessions, allowing you to continue previous conversations and maintain context across multiple interactions. Sessions are stored per working directory and include conversation history and metadata.
+
+## How Sessions Work
+
+Every time you run a qckfx command, the CLI:
+
+1. **Saves the conversation** after successful execution
+2. **Stores session data** in a platform-specific directory
+3. **Organizes by working directory** so each project has its own session history
+4. **Tracks metadata** like timestamps and git commit information
+
+## Continuing Sessions
+
+Use the `--continue` (or `-c`) flag to resume your most recent conversation:
+
+```bash
+# Start a new conversation
+qckfx "Hello, I'm working on a React project"
+
+# Continue the conversation later
+qckfx --continue "Can you help me add TypeScript support?"
+
+# Continue with a different model
+qckfx -c -m claude-sonnet-4 "Use a more powerful model for this task"
+```
+
+<Info>
+Sessions are tied to your current working directory. If you change directories, `--continue` will look for the most recent session in that new directory.
+</Info>
+
+## Session Storage
+
+Sessions are stored in platform-specific locations:
+
+<Tabs>
+  <Tab title="macOS">
+    ```
+    ~/Library/Application Support/qckfx/sessions/
+    ```
+  </Tab>
+  <Tab title="Linux">
+    ```
+    ~/.local/share/qckfx/sessions/
+    # Or $XDG_DATA_HOME/qckfx/sessions/ if XDG_DATA_HOME is set
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```
+    %APPDATA%/qckfx/sessions/
+    # Or ~/.qckfx/sessions/ as fallback
+    ```
+  </Tab>
+</Tabs>
+
+### Directory Structure
+
+Sessions are organized by working directory:
+
+```
+sessions/
+├── <base64-encoded-cwd-1>/
+│   ├── 2024-01-15_14-30-45-123.json
+│   ├── 2024-01-15_16-22-10-456.json
+│   └── last.json                    # Points to most recent session
+└── <base64-encoded-cwd-2>/
+    ├── 2024-01-16_09-15-30-789.json
+    └── last.json
+```
+
+## Session Data Format
+
+Each session file contains:
+
+```json
+{
+  "createdAt": "2024-01-15T14:30:45.123Z",
+  "cwd": "/Users/username/projects/my-app",
+  "gitCommit": "abc123f",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, I'm working on a React project"
+    },
+    {
+      "role": "assistant", 
+      "content": "I'd be happy to help with your React project..."
+    }
+  ]
+}
+```
+
+### Session Metadata
+
+| Field | Description |
+|-------|-------------|
+| `createdAt` | ISO timestamp when session was created |
+| `cwd` | Absolute path of working directory |
+| `gitCommit` | Short git commit SHA (if in a git repository) |
+| `messages` | Array of conversation messages |
+
+## Session Behavior
+
+### Automatic Session Creation
+
+Sessions are created automatically:
+
+```bash
+# This creates a new session
+qckfx "What files are in this directory?"
+
+# This updates the same session
+qckfx --continue "Can you explain the package.json?"
+```
+
+### Per-Directory Isolation
+
+Each working directory maintains its own session history:
+
+```bash
+cd /project-a
+qckfx "Help me with this React app"
+
+cd /project-b  
+qckfx --continue  # ⚠️ No session found, starts fresh
+
+cd /project-a
+qckfx --continue  # ✅ Continues React app conversation
+```
+
+### Session Recovery
+
+If session loading fails, the CLI gracefully falls back:
+
+```bash
+$ qckfx --continue "Continue our discussion"
+⚠️  Failed to rebuild previous session; starting fresh.
+```
+
+This can happen if:
+- Session file is corrupted
+- Message format has changed between versions
+- File permissions prevent reading
+
+## Working with Sessions
+
+### Check Session Status
+
+There's no built-in command to view session history, but you can inspect the files directly:
+
+```bash
+# Find your session directory
+echo "Session directory: $(node -e "
+const os = require('os');
+const path = require('path');
+let base;
+switch (process.platform) {
+  case 'darwin': base = path.join(os.homedir(), 'Library', 'Application Support'); break;
+  case 'linux': base = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'); break;
+  default: base = process.env.APPDATA || path.join(os.homedir(), '.qckfx'); break;
+}
+console.log(path.join(base, 'qckfx', 'sessions'));
+")"
+
+# List sessions for current directory
+ls -la "$(session-dir)/$(echo $(pwd) | base64)"
+```
+
+### Clear Sessions
+
+To start fresh, you can remove session files:
+
+```bash
+# Clear all sessions (careful!)
+rm -rf ~/Library/Application\ Support/qckfx/sessions/
+
+# Clear sessions for current directory only
+rm -rf "$(session-dir)/$(echo $(pwd) | base64)"
+```
+
+<Warning>
+Removing session files is permanent. There's no way to recover deleted conversation history.
+</Warning>
+
+## Best Practices
+
+### 1. Use Descriptive Initial Prompts
+
+Since sessions maintain context, start with clear context:
+
+```bash
+# Good: Sets clear context
+qckfx "I'm debugging a TypeScript compilation error in my Next.js app"
+
+# Less ideal: Vague context
+qckfx "Help me fix this error"
+```
+
+### 2. Continue Related Work
+
+Use `--continue` for related tasks in the same project:
+
+```bash
+qckfx "Analyze the performance of this React component"
+qckfx --continue "Now suggest optimizations"
+qckfx --continue "Help me implement the suggested changes"
+```
+
+### 3. Start Fresh for New Topics
+
+Don't continue sessions when switching to unrelated topics:
+
+```bash
+# Previous session about React performance
+qckfx --continue "Now help me set up a database"  # ❌ Confusing context
+
+# Better: Start fresh for new topic
+qckfx "Help me set up a PostgreSQL database for my app"  # ✅ Clear context
+```
+
+### 4. Leverage Directory Isolation
+
+Organize your work by using different directories for different projects:
+
+```bash
+cd ~/projects/frontend-app
+qckfx "Help with React components"
+
+cd ~/projects/backend-api  
+qckfx "Help with API design"  # Separate session automatically
+```
+
+## Troubleshooting
+
+### Session Not Found
+
+```bash
+$ qckfx --continue "Continue our chat"
+⚠️  No previous session found; starting a fresh one.
+```
+
+**Causes:**
+- First time running qckfx in this directory
+- Session files were deleted
+- Working in a different directory than before
+
+### Session Loading Failed
+
+```bash
+$ qckfx --continue "Continue our chat"  
+⚠️  Failed to rebuild previous session; starting fresh.
+```
+
+**Causes:**
+- Corrupted session file
+- Version incompatibility
+- File permission issues
+
+**Solution:** The CLI will start a fresh session automatically.
+
+### Permission Errors
+
+If you see permission errors when saving sessions, check:
+
+1. **Directory permissions** for the session storage location
+2. **Disk space** availability
+3. **File system** read/write permissions
+
+## Session Limitations
+
+- **No cross-directory sharing**: Sessions are isolated per working directory
+- **No manual session management**: You can't manually switch between multiple sessions in the same directory
+- **No session naming**: Sessions are identified by timestamp only
+- **No session export/import**: Sessions are stored in internal format only
+
+## Related Topics
+
+- [qckfx Command](/cli/qckfx-command) - Using the `--continue` flag
+- [Context Window](/sdk/context-window) - Understanding conversation context
+- [Agent Configuration](/sdk/configuration) - Configuring agent behavior

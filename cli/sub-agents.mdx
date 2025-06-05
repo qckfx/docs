@@ -1,0 +1,291 @@
+---
+title: "Sub-agents"
+description: "Use sub-agent tools to extend agent capabilities dynamically"
+icon: "puzzle-piece"
+---
+
+Sub-agents are specialized agent configurations that can be added as tools to your main agent. They allow you to extend agent capabilities dynamically without modifying the core configuration, enabling modular and reusable agent architectures.
+
+## What are Sub-agents?
+
+Sub-agents are essentially other agent configurations that get loaded as tools. When your main agent needs specialized capabilities, it can invoke a sub-agent tool, which runs its own agent instance with its own configuration, tools, and system prompt.
+
+<Info>
+Sub-agents are an experimental feature. Enable them by setting `experimentalFeatures.subAgents: true` in your agent configuration.
+</Info>
+
+## Using Sub-agents with CLI
+
+Add sub-agents to any CLI execution using the `--with-subagent` flag:
+
+```bash
+# Add a single sub-agent
+qckfx --with-subagent browser "Research the latest React patterns"
+
+# Add multiple sub-agents
+qckfx --with-subagent browser database "Analyze our data architecture"
+
+# Combine with agent config
+qckfx -a my-agent --with-subagent browser "Enhanced analysis with web research"
+```
+
+## Sub-agent Resolution
+
+The CLI uses smart path resolution for sub-agents, similar to agent configurations:
+
+1. **Explicit Path**: If the name contains `/` or `\`, treat as direct file path
+2. **Auto Extension**: Append `.json` if missing
+3. **Convention Directory**: Look in `.qckfx/sub-agents/<name>.json`
+4. **Fallback**: Use direct path (will error if not found)
+
+<CodeGroup>
+```bash Direct Path
+# Uses ./configs/browser-agent.json
+qckfx --with-subagent ./configs/browser-agent.json "prompt"
+```
+
+```bash Auto Extension  
+# Uses ./browser.json (auto-appends .json)
+qckfx --with-subagent browser "prompt"
+```
+
+```bash Convention Directory
+# Uses ./.qckfx/sub-agents/browser.json
+qckfx --with-subagent sub-agents/browser "prompt"
+```
+</CodeGroup>
+
+## Sub-agent Configuration
+
+Sub-agents use the same configuration schema as regular agents:
+
+```json
+{
+  "environment": "local",
+  "defaultModel": "claude-sonnet-4",
+  "systemPrompt": "You are a specialized web research assistant...",
+  "tools": ["bash", "file_read", "file_write"],
+  "logLevel": "info"
+}
+```
+
+### Example: Browser Research Sub-agent
+
+Create `.qckfx/sub-agents/browser.json`:
+
+```json
+{
+  "environment": "local",
+  "defaultModel": "claude-sonnet-4",
+  "systemPrompt": "You are a web research specialist. When given a research query, you help gather information from the web, analyze trends, and provide comprehensive insights. Focus on finding authoritative sources and current information.",
+  "tools": ["bash", "file_read", "file_write", "grep"],
+  "logLevel": "info"
+}
+```
+
+### Example: Database Analysis Sub-agent
+
+Create `.qckfx/sub-agents/database.json`:
+
+```json
+{
+  "environment": "local", 
+  "defaultModel": "claude-sonnet-4",
+  "systemPrompt": "You are a database architecture specialist. You help analyze database schemas, optimize queries, design data models, and troubleshoot database performance issues. You understand SQL, NoSQL, and various database systems.",
+  "tools": ["bash", "file_read", "grep", "file_write"],
+  "logLevel": "debug"
+}
+```
+
+## How Sub-agents Work
+
+When you use `--with-subagent`, the CLI:
+
+1. **Enables Experimental Features**: Automatically sets `experimentalFeatures.subAgents: true`
+2. **Loads Sub-agent Configs**: Reads the specified sub-agent configuration files
+3. **Adds as Tools**: Each sub-agent becomes available as a tool with its name
+4. **Preserves Existing Tools**: Sub-agents are added to existing tools, not replaced
+
+### Tool Integration
+
+Sub-agents appear as tools in your main agent:
+
+```typescript
+// If you add --with-subagent browser database
+// Your agent will have these additional tools available:
+{
+  name: "browser",
+  description: "Sub-agent defined in .qckfx/sub-agents/browser.json",
+  // ... tool implementation
+}
+
+{
+  name: "database", 
+  description: "Sub-agent defined in .qckfx/sub-agents/database.json",
+  // ... tool implementation
+}
+```
+
+## Best Practices
+
+### 1. Organize by Capability
+
+Structure your sub-agents around specific capabilities:
+
+```
+.qckfx/sub-agents/
+├── browser.json          # Web research and browsing
+├── database.json         # Database analysis and design
+├── security.json         # Security analysis and auditing
+├── documentation.json    # Documentation generation
+└── testing.json          # Test generation and analysis
+```
+
+### 2. Use Descriptive System Prompts
+
+Give each sub-agent a clear, specific role:
+
+```json
+{
+  "systemPrompt": "You are a security auditing specialist. Focus on identifying vulnerabilities, analyzing security patterns, and recommending security best practices. Always consider OWASP guidelines and current threat landscapes."
+}
+```
+
+### 3. Configure Appropriate Tools
+
+Give sub-agents only the tools they need:
+
+```json
+{
+  "tools": ["bash", "file_read", "grep"],  // Security auditing tools
+  // Don't include file_write if the sub-agent should only analyze
+}
+```
+
+### 4. Use Appropriate Models
+
+Choose models based on sub-agent complexity:
+
+```json
+{
+  "defaultModel": "claude-sonnet-4"  // For complex analysis
+}
+```
+
+```json
+{
+  "defaultModel": "gemini-2.5-pro"   // For simpler tasks
+}
+```
+
+## Common Sub-agent Patterns
+
+### Research Assistant
+
+```json
+{
+  "environment": "local",
+  "defaultModel": "claude-sonnet-4", 
+  "systemPrompt": "You are a research assistant specializing in gathering and analyzing information. Provide comprehensive, well-sourced insights on any topic.",
+  "tools": ["bash", "file_read", "file_write", "grep"]
+}
+```
+
+### Code Reviewer
+
+```json
+{
+  "environment": "local",
+  "defaultModel": "claude-sonnet-4",
+  "systemPrompt": "You are a senior code reviewer. Analyze code for quality, performance, security, and maintainability. Provide constructive feedback and suggestions.",
+  "tools": ["file_read", "grep", "bash"]
+}
+```
+
+### Documentation Generator
+
+```json
+{
+  "environment": "local",
+  "defaultModel": "gemini-2.5-pro",
+  "systemPrompt": "You are a technical documentation specialist. Create clear, comprehensive documentation from code and specifications.",
+  "tools": ["file_read", "file_write", "grep", "bash"]
+}
+```
+
+## Troubleshooting
+
+### Sub-agent Not Found
+
+```bash
+$ qckfx --with-subagent nonexistent "prompt"
+Error: ENOENT: no such file or directory, open '.qckfx/sub-agents/nonexistent.json'
+```
+
+**Solution**: Check that the sub-agent configuration file exists in the expected location.
+
+### Invalid Sub-agent Configuration
+
+```bash
+$ qckfx --with-subagent invalid-config "prompt"
+Configuration is invalid ❌
+[validation errors...]
+```
+
+**Solution**: Validate the sub-agent configuration using `qckfx --validate .qckfx/sub-agents/invalid-config.json`.
+
+### Sub-agent Tool Not Available
+
+If the main agent doesn't seem to have access to sub-agent tools:
+
+1. **Check Experimental Features**: Ensure `experimentalFeatures.subAgents` is enabled
+2. **Verify Tool Loading**: Check that sub-agents were loaded without errors
+3. **Test Tool Availability**: Ask the agent to list available tools
+
+### Permission Issues
+
+```bash
+Error: EACCES: permission denied, open '.qckfx/sub-agents/browser.json'
+```
+
+**Solution**: Check file permissions on the sub-agent configuration files.
+
+## Limitations
+
+- **Experimental Feature**: Sub-agents are experimental and may change in future versions
+- **No Nested Sub-agents**: Sub-agents cannot have their own sub-agents
+- **Same Environment**: Sub-agents must use the same environment as the main agent
+- **No Cross-References**: Sub-agents cannot directly communicate with each other
+
+## Advanced Usage
+
+### Dynamic Sub-agent Selection
+
+You can conditionally add sub-agents based on the task:
+
+```bash
+# For web-related tasks
+qckfx --with-subagent browser "Research modern CSS frameworks"
+
+# For database tasks  
+qckfx --with-subagent database "Design a user authentication schema"
+
+# For comprehensive analysis
+qckfx --with-subagent browser database security "Full stack security audit"
+```
+
+### Combining with Agent Configs
+
+Sub-agents work with any agent configuration:
+
+```bash
+# Use a specialized agent with additional sub-agent capabilities
+qckfx -a security-agent --with-subagent browser "Security research with web analysis"
+```
+
+## Related Topics
+
+- [qckfx Command](/cli/qckfx-command) - Using the `--with-subagent` flag
+- [Agent Configuration](/sdk/configuration) - Understanding agent configuration schema
+- [Tools](/sdk/tools) - How tools work in the agent system
+- [Experimental Features](/sdk/configuration#experimental-features) - Enabling experimental features

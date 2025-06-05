@@ -1,0 +1,558 @@
+---
+title: "Agent Self-Improvement"
+description: "Build agents that can modify and improve themselves and other agents in your system"
+icon: "arrows-rotate"
+---
+
+Agent self-improvement represents one of the most powerful patterns in AI automation: creating agents that can analyze, modify, and enhance themselves and other agents in your system. This guide demonstrates how to implement this pattern using real examples from the qckfx documentation repository.
+
+## Overview
+
+Self-improving agent systems work by having specialized agents that can:
+
+- **Analyze existing agent configurations** to identify improvement opportunities
+- **Modify system prompts** to enhance agent performance and capabilities  
+- **Create new specialized agents** for emerging use cases
+- **Maintain and update** agent configurations as requirements evolve
+- **Validate changes** to ensure system integrity and performance
+
+## Real-World Implementation
+
+The qckfx documentation repository itself uses a self-improving agent system. Let's examine the actual implementation:
+
+### Agent Configuration Structure
+
+Each agent is defined in a JSON configuration file following this pattern:
+
+```json
+{
+  "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+  "defaultModel": "claude-sonnet-4",
+  "logLevel": "error",
+  "systemPrompt": "You are AGENT-NAME, specialized in...",
+  "tools": ["bash", "file_read", "file_write", "think"],
+  "experimentalFeatures": {
+    "subAgents": true
+  }
+}
+```
+
+### The PROMPT-EDITOR Agent
+
+The system includes a specialized **PROMPT-EDITOR** agent (`agent-editor.json`) that can modify and improve other agents:
+
+<CodeGroup>
+
+```json Key Configuration
+{
+  "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+  "defaultModel": "claude-sonnet-4",
+  "logLevel": "error",
+  "systemPrompt": "You are PROMPT-EDITOR, an expert system prompt architect...",
+  "tools": ["bash", "glob", "grep", "ls", "file_read", "file_edit", "file_write", "think", "batch"]
+}
+```
+
+```text Core Capabilities
+• Craft new system prompts with precision and clarity
+• Enhance existing prompts for better performance
+• Ensure prompts accurately reflect agent capabilities
+• Apply prompt engineering best practices
+• Maintain consistency across all agent prompts
+• Validate JSON syntax after modifications
+• Document significant changes and rationale
+```
+
+</CodeGroup>
+
+### Specialized Agent Ecosystem
+
+The repository demonstrates a complete ecosystem of self-improving agents:
+
+<Tabs>
+  <Tab title="Documentation Writer">
+    **Purpose**: Creates and maintains technical documentation
+    
+    **Self-Improvement Capabilities**:
+    - Updates documentation based on code changes
+    - Improves existing docs for clarity and accuracy
+    - Creates new documentation for emerging features
+    - Validates all examples and links
+  </Tab>
+  
+  <Tab title="Commit Agent">
+    **Purpose**: Creates focused, meaningful git commits
+    
+    **Self-Improvement Capabilities**:
+    - Analyzes code changes to understand intent
+    - Separates functional changes from style fixes
+    - Writes commit messages about content, not process
+    - Handles pre-commit hook failures intelligently
+  </Tab>
+  
+  <Tab title="Browser Sub-Agent">
+    **Purpose**: Efficient codebase exploration and intelligence gathering
+    
+    **Self-Improvement Capabilities**:
+    - Maps codebases and understands structure
+    - Extracts specific information with precision
+    - Provides reconnaissance for other agents
+    - Optimizes search strategies based on patterns
+  </Tab>
+</Tabs>
+
+## Implementation Patterns
+
+### 1. Agent Specialization
+
+Create agents with focused responsibilities:
+
+```typescript
+// Example: Creating a specialized code review agent
+const codeReviewAgent = new Agent({
+  name: "CODE-REVIEWER",
+  systemPrompt: `You are CODE-REVIEWER, specialized in analyzing code quality,
+    security vulnerabilities, and suggesting improvements...`,
+  tools: ["file_read", "grep", "bash", "think"],
+  defaultModel: "claude-sonnet-4"
+});
+```
+
+### 2. Cross-Agent Communication
+
+Enable agents to work together:
+
+```typescript
+// Agent that can invoke other specialized agents
+const orchestratorAgent = new Agent({
+  systemPrompt: `You coordinate multiple specialized agents to complete complex tasks.
+    Available agents:
+    - code-reviewer: For code quality analysis
+    - documentation-writer: For creating docs
+    - prompt-editor: For improving agent prompts`,
+  tools: ["bash", "file_read", "file_write", {
+    name: "code-reviewer",
+    configFile: ".qckfx/agents/code-reviewer.json"
+  }]
+});
+```
+
+### 3. Self-Modification Protocols
+
+Implement safe self-modification:
+
+<CodeGroup>
+
+```typescript Safety Checks
+// Always validate before modifying agent configs
+async function validateAgentConfig(configPath: string) {
+  try {
+    const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+    // Validate against schema
+    // Check required fields
+    // Verify tool availability
+    return { valid: true, config };
+  } catch (error) {
+    return { valid: false, error: error.message };
+  }
+}
+```
+
+```typescript Backup Strategy
+// Create backups before modifications
+async function modifyAgentSafely(configPath: string, modifications: any) {
+  // 1. Create backup
+  await fs.copyFile(configPath, `${configPath}.backup`);
+  
+  // 2. Apply modifications
+  const result = await applyModifications(configPath, modifications);
+  
+  // 3. Validate result
+  const validation = await validateAgentConfig(configPath);
+  
+  if (!validation.valid) {
+    // 4. Restore backup if validation fails
+    await fs.copyFile(`${configPath}.backup`, configPath);
+    throw new Error(`Modification failed: ${validation.error}`);
+  }
+  
+  return result;
+}
+```
+
+</CodeGroup>
+
+## Advanced Self-Improvement Strategies
+
+### 1. Performance Monitoring
+
+Track agent performance and automatically optimize:
+
+```typescript
+class AgentPerformanceMonitor {
+  async analyzeAgentPerformance(agentName: string) {
+    const metrics = await this.collectMetrics(agentName);
+    
+    if (metrics.successRate < 0.8) {
+      // Trigger prompt improvement
+      await this.improveAgentPrompt(agentName, metrics.failurePatterns);
+    }
+    
+    if (metrics.averageResponseTime > 30000) {
+      // Optimize tool usage
+      await this.optimizeToolConfiguration(agentName);
+    }
+  }
+  
+  private async improveAgentPrompt(agentName: string, failurePatterns: string[]) {
+    const promptEditor = new Agent({ configFile: '.qckfx/agent-editor.json' });
+    
+    await promptEditor.run(`Analyze and improve the system prompt for ${agentName}.
+      Common failure patterns: ${failurePatterns.join(', ')}`);
+  }
+}
+```
+
+### 2. Agent Self-Reflection
+
+Ask agents to analyze their own performance and suggest improvements:
+
+```typescript
+class AgentSelfReflection {
+  async improveAgentThroughReflection(agentName: string) {
+    const agent = new Agent({ configFile: `.qckfx/agents/${agentName}.json` });
+    
+    // Ask the agent to reflect on its capabilities and limitations
+    const reflectionPrompt = `
+      Analyze your recent performance and current capabilities. Consider:
+      
+      1. What tasks do you struggle with or take too long to complete?
+      2. What additional tools would make you more efficient?
+      3. How could your system prompt be improved for better clarity or performance?
+      4. What patterns do you notice in your successful vs unsuccessful interactions?
+      
+      Provide specific, actionable suggestions for improvement.
+    `;
+    
+    const reflection = await agent.processQuery(reflectionPrompt);
+    
+    // Parse and implement the agent's suggestions
+    await this.implementSuggestions(agentName, reflection.response);
+  }
+  
+  private async implementSuggestions(agentName: string, suggestions: string) {
+    // Use the PROMPT-EDITOR agent to implement improvements
+    const promptEditor = new Agent({ configFile: '.qckfx/agent-editor.json' });
+    
+    await promptEditor.processQuery(`
+      Based on these self-reflection insights from ${agentName}:
+      
+      ${suggestions}
+      
+      Please update the agent configuration to implement these improvements.
+      Focus on practical changes that will enhance performance.
+    `);
+  }
+}
+```
+
+### 3. Emergent Agent Creation
+
+Create new agents based on recurring task patterns:
+
+```typescript
+class EmergentAgentFactory {
+  async createAgentFromPatterns(taskPatterns: TaskPattern[]) {
+    // Analyze common task patterns
+    const commonTools = this.identifyCommonTools(taskPatterns);
+    const commonPromptElements = this.extractPromptPatterns(taskPatterns);
+    
+    // Generate new agent configuration
+    const newAgentConfig = {
+      name: this.generateAgentName(taskPatterns),
+      systemPrompt: this.synthesizePrompt(commonPromptElements),
+      tools: commonTools,
+      defaultModel: "claude-sonnet-4"
+    };
+    
+    // Create and validate new agent
+    const configPath = `.qckfx/agents/${newAgentConfig.name.toLowerCase()}.json`;
+    await this.createAgentConfig(configPath, newAgentConfig);
+    
+    return newAgentConfig;
+  }
+}
+```
+
+## Practical Self-Reflection Examples
+
+### Real-World Improvement Workflow
+
+Here's how to implement agent self-reflection in practice:
+
+<CodeGroup>
+
+```typescript Step 1: Reflection Session
+// Schedule regular reflection sessions for your agents
+async function conductReflectionSession(agentName: string) {
+  const agent = new Agent({ configFile: `.qckfx/agents/${agentName}.json` });
+  
+  const reflectionPrompt = `
+    After working on various tasks, please reflect on your performance:
+    
+    **Efficiency Analysis:**
+    - Which types of tasks take you the longest to complete?
+    - What tools do you find yourself wishing you had access to?
+    - Are there repetitive patterns in your work that could be optimized?
+    
+    **Quality Assessment:**
+    - What kinds of errors or misunderstandings occur most frequently?
+    - How could your instructions be clearer or more specific?
+    - What additional context would help you perform better?
+    
+    **Capability Gaps:**
+    - What tasks do you currently struggle with or cannot complete?
+    - What knowledge or skills would expand your effectiveness?
+    
+    Provide 3-5 specific, actionable recommendations for improvement.
+  `;
+  
+  const reflection = await agent.processQuery(reflectionPrompt);
+  return reflection.response;
+}
+```
+
+```typescript Step 2: Parse Suggestions
+// Extract actionable insights from agent reflection
+function parseReflectionInsights(reflection: string) {
+  // Use the agent itself to structure its own suggestions
+  const structurePrompt = `
+    Parse these reflection insights into structured improvement suggestions:
+    
+    ${reflection}
+    
+    Format as JSON with categories:
+    {
+      "toolRequests": ["tool1", "tool2"],
+      "promptImprovements": ["improvement1", "improvement2"],
+      "capabilityGaps": ["gap1", "gap2"],
+      "efficiencyOptimizations": ["optimization1", "optimization2"]
+    }
+  `;
+  
+  // Process with a utility agent or parse manually
+  return parseStructuredResponse(structurePrompt);
+}
+```
+
+```typescript Step 3: Implement Changes
+// Apply the agent's suggestions systematically
+async function implementReflectionSuggestions(
+  agentName: string, 
+  suggestions: ReflectionSuggestions
+) {
+  const promptEditor = new Agent({ configFile: '.qckfx/agent-editor.json' });
+  
+  // Create improvement plan
+  const improvementPrompt = `
+    Update the configuration for ${agentName} based on these self-reflection insights:
+    
+    **Tool Requests:** ${suggestions.toolRequests.join(', ')}
+    **Prompt Improvements:** ${suggestions.promptImprovements.join('; ')}
+    **Capability Gaps:** ${suggestions.capabilityGaps.join('; ')}
+    **Efficiency Optimizations:** ${suggestions.efficiencyOptimizations.join('; ')}
+    
+    Make practical, incremental improvements that address these specific points.
+    Ensure all changes maintain backward compatibility and system stability.
+  `;
+  
+  await promptEditor.processQuery(improvementPrompt);
+}
+```
+
+</CodeGroup>
+
+### Example Reflection Outcomes
+
+Here are real examples of agent self-reflection leading to improvements:
+
+<Tabs>
+  <Tab title="Documentation Agent">
+    **Original Reflection:**
+    > "I often spend time searching for the same information repeatedly. I would benefit from a 'grep' tool to search file contents more efficiently, and my prompt could be clearer about when to create new files vs. update existing ones."
+    
+    **Implemented Changes:**
+    - Added `grep` tool to configuration
+    - Enhanced prompt with clear file creation guidelines
+    - Added examples of when to use different documentation patterns
+    
+    **Result:** 40% reduction in task completion time
+  </Tab>
+  
+  <Tab title="Code Review Agent">
+    **Original Reflection:**
+    > "I struggle with understanding the broader context of code changes. I need better tools for exploring project structure and understanding dependencies between files."
+    
+    **Implemented Changes:**
+    - Added `glob` tool for pattern-based file discovery
+    - Enhanced prompt with instructions for contextual analysis
+    - Added dependency mapping capabilities
+    
+    **Result:** More comprehensive reviews with better architectural insights
+  </Tab>
+  
+  <Tab title="Commit Agent">
+    **Original Reflection:**
+    > "I sometimes create overly verbose commit messages. I need clearer guidelines about what level of detail is appropriate and better understanding of conventional commit formats."
+    
+    **Implemented Changes:**
+    - Updated prompt with specific commit message templates
+    - Added examples of good vs. poor commit messages
+    - Included guidelines for message length and detail level
+    
+    **Result:** More consistent, appropriately detailed commit messages
+  </Tab>
+</Tabs>
+
+### Continuous Improvement Loop
+
+Establish a regular improvement cycle:
+
+```typescript
+class ContinuousImprovementLoop {
+  async runImprovementCycle(agentName: string) {
+    // 1. Conduct reflection session
+    const reflection = await this.conductReflectionSession(agentName);
+    
+    // 2. Parse and prioritize suggestions
+    const suggestions = await this.parseReflectionInsights(reflection);
+    const prioritized = await this.prioritizeSuggestions(suggestions);
+    
+    // 3. Implement high-priority changes
+    await this.implementTopSuggestions(agentName, prioritized.slice(0, 3));
+    
+    // 4. Test improvements
+    const testResults = await this.testAgentPerformance(agentName);
+    
+    // 5. Validate improvements
+    if (testResults.performanceImproved) {
+      await this.commitChanges(agentName);
+    } else {
+      await this.rollbackChanges(agentName);
+    }
+    
+    // 6. Schedule next reflection
+    await this.scheduleNextReflection(agentName, 7); // days
+  }
+  
+  private async prioritizeSuggestions(suggestions: ReflectionSuggestions) {
+    // Use another agent to prioritize suggestions by impact and feasibility
+    const prioritizer = new Agent({ configFile: '.qckfx/prioritizer.json' });
+    
+    const priorityPrompt = `
+      Rank these improvement suggestions by impact and implementation difficulty:
+      ${JSON.stringify(suggestions, null, 2)}
+      
+      Consider:
+      - Which changes will have the biggest performance impact?
+      - Which are easiest to implement safely?
+      - Which address the most critical capability gaps?
+    `;
+    
+    return await prioritizer.processQuery(priorityPrompt);
+  }
+}
+```
+
+## Best Practices
+
+### Security Considerations
+
+<Warning>
+Self-modifying systems require careful security controls:
+
+- **Validate all modifications** against a schema before applying
+- **Create backups** before any agent configuration changes
+- **Implement rollback mechanisms** for failed modifications
+- **Audit all changes** with detailed logging
+- **Restrict modification permissions** to authorized agents only
+</Warning>
+
+### Design Principles
+
+<Tip>
+Follow these principles for robust self-improving systems:
+
+1. **Single Responsibility**: Each agent should have a focused, well-defined purpose
+2. **Fail-Safe Defaults**: Always default to safe, conservative behavior
+3. **Gradual Improvement**: Make incremental changes rather than dramatic overhauls
+4. **Validation First**: Validate all changes before applying them
+5. **Monitoring**: Continuously monitor agent performance and behavior
+</Tip>
+
+### Testing Self-Improvement
+
+```typescript
+// Example test suite for self-improving agents
+describe('Agent Self-Improvement', () => {
+  test('should improve prompt based on failure patterns', async () => {
+    const originalConfig = await loadAgentConfig('test-agent.json');
+    const failurePatterns = ['timeout on complex queries', 'unclear responses'];
+    
+    await improveAgent('test-agent', failurePatterns);
+    
+    const improvedConfig = await loadAgentConfig('test-agent.json');
+    expect(improvedConfig.systemPrompt).toContain('timeout handling');
+    expect(improvedConfig.systemPrompt).toContain('clear responses');
+  });
+  
+  test('should safely rollback failed modifications', async () => {
+    const originalConfig = await loadAgentConfig('test-agent.json');
+    
+    // Attempt invalid modification
+    await expect(
+      modifyAgentConfig('test-agent.json', { invalidField: 'value' })
+    ).rejects.toThrow();
+    
+    // Verify rollback occurred
+    const currentConfig = await loadAgentConfig('test-agent.json');
+    expect(currentConfig).toEqual(originalConfig);
+  });
+});
+```
+
+## Future Directions
+
+### 1. Multi-Agent Learning Networks
+
+Create networks of agents that learn from each other:
+
+- **Shared Knowledge Base**: Agents contribute learnings to a common repository
+- **Cross-Pollination**: Successful patterns from one agent inform others
+- **Collective Intelligence**: The system becomes smarter than individual agents
+
+### 2. Automated A/B Testing
+
+Implement automated testing of agent improvements:
+
+- **Performance Baselines**: Establish metrics for current agent performance
+- **Controlled Experiments**: Test improvements against baselines
+- **Automatic Rollout**: Deploy improvements that show measurable gains
+
+### 3. Meta-Learning Capabilities
+
+Develop agents that learn how to learn better:
+
+- **Learning Strategy Optimization**: Improve how agents acquire new capabilities
+- **Transfer Learning**: Apply knowledge from one domain to another
+- **Self-Reflection**: Agents that can analyze their own reasoning processes
+
+## Conclusion
+
+Agent self-improvement represents a powerful paradigm for creating adaptive, evolving AI systems. By implementing the patterns demonstrated in this guide, you can build agents that not only solve problems but continuously improve their ability to solve future problems.
+
+The key is to start simple with focused, specialized agents and gradually build more sophisticated self-improvement capabilities as your system matures. Always prioritize safety, validation, and monitoring to ensure your self-improving agents enhance rather than compromise your system's reliability.
+
+<Info>
+**Next Steps**: Try implementing a simple prompt-editing agent for your own project. Start with basic validation and backup mechanisms, then gradually add more sophisticated improvement capabilities as you gain confidence with the pattern.
+</Info>

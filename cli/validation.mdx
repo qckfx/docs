@@ -1,0 +1,229 @@
+---
+title: "Configuration Validation"
+description: "Validate agent configuration files using the built-in validation tools"
+icon: "check-circle"
+---
+
+The qckfx CLI provides robust validation tools to ensure your agent configurations are correct before execution. This helps catch errors early and ensures your agents will work as expected.
+
+## Quick Validation
+
+Use the `--validate` flag to validate a configuration file without executing it:
+
+```bash
+# Validate a configuration file
+qckfx --validate my-agent.json
+
+# Validate with path resolution
+qckfx --validate security-agent  # Looks for .qckfx/security-agent.json
+```
+
+## Validation Process
+
+The validation process checks your configuration against the official JSON schema from `@qckfx/sdk-schema`:
+
+1. **JSON Syntax**: Ensures the file is valid JSON
+2. **Schema Compliance**: Validates against the AgentConfig schema
+3. **Required Fields**: Checks that all required fields are present
+4. **Type Safety**: Ensures all fields have correct types
+5. **Enum Values**: Validates that enum fields use allowed values
+
+## Success Output
+
+When validation passes, you'll see:
+
+```bash
+$ qckfx --validate my-agent.json
+Configuration is valid ✅
+```
+
+The command exits with code `0` on success.
+
+## Error Output
+
+When validation fails, you'll see detailed error information:
+
+```bash
+$ qckfx --validate invalid-agent.json
+Configuration is invalid ❌
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "number",
+    "path": ["defaultModel"],
+    "message": "Expected string, received number"
+  }
+]
+```
+
+The command exits with code `1` on failure.
+
+## Common Validation Errors
+
+### Invalid Environment Type
+
+```json
+{
+  "environment": "invalid"  // ❌ Only 'local' is supported
+}
+```
+
+**Fix**: Use `"environment": "local"`
+
+### Invalid Log Level
+
+```json
+{
+  "logLevel": "verbose"  // ❌ Not a valid log level
+}
+```
+
+**Fix**: Use one of: `"debug"`, `"info"`, `"warn"`, `"error"`
+
+### Invalid Tool Names
+
+```json
+{
+  "tools": ["invalid_tool"]  // ❌ Tool doesn't exist
+}
+```
+
+**Fix**: Use valid built-in tool names or sub-agent configurations
+
+### Missing Required Fields
+
+```json
+{
+  "defaultModel": "claude-sonnet-4"
+  // ❌ Missing required 'environment' field
+}
+```
+
+**Fix**: Add the required `environment` field
+
+## Configuration Schema
+
+The validation checks against this schema structure:
+
+```typescript
+interface AgentConfig {
+  environment: 'local';                   // Required: execution environment
+  defaultModel?: string;                  // Optional: default model name
+  logLevel?: 'debug' | 'info' | 'warn' | 'error';  // Optional: logging level
+  systemPrompt?: string;                  // Optional: custom system prompt
+  tools?: (string | SubAgentConfig)[];    // Optional: tools to enable
+  experimentalFeatures?: {                // Optional: experimental features
+    subAgents?: boolean;
+  };
+}
+```
+
+## Validation in CI/CD
+
+You can use validation in your CI/CD pipelines to ensure configuration quality:
+
+```yaml
+# GitHub Actions example
+- name: Validate Agent Configurations
+  run: |
+    for config in .qckfx/*.json; do
+      npx @qckfx/agent --validate \"$config\"
+    done
+```
+
+```bash
+# Shell script for batch validation
+#!/bin/bash
+for config in .qckfx/*.json; do
+  if ! qckfx --validate \"$config\"; then
+    echo \"Validation failed for $config\"
+    exit 1
+  fi
+done
+echo \"All configurations are valid ✅\"
+```
+
+## Validation vs. Execution
+
+| Validation (`--validate`) | Execution (normal run) |
+|---------------------------|------------------------|
+| ✅ Checks JSON syntax | ✅ Checks JSON syntax |
+| ✅ Validates schema | ✅ Validates schema |
+| ❌ No agent creation | ✅ Creates agent instance |
+| ❌ No tool loading | ✅ Loads and validates tools |
+| ❌ No model connection | ✅ Connects to model provider |
+| Fast (< 1 second) | Slower (depends on setup) |
+
+<Info>
+Validation only checks the configuration structure. Some errors (like invalid model names or missing API keys) will only be caught during actual execution.
+</Info>
+
+## Best Practices
+
+### 1. Validate Before Committing
+
+Always validate configurations before committing to version control:
+
+```bash
+# Pre-commit hook example
+qckfx --validate .qckfx/production-agent.json
+```
+
+### 2. Use in Development Workflow
+
+Integrate validation into your development process:
+
+```bash
+# After editing a configuration
+vim .qckfx/my-agent.json
+qckfx --validate .qckfx/my-agent.json
+```
+
+### 3. Batch Validation
+
+Validate all configurations at once:
+
+```bash
+# Validate all configs in .qckfx directory
+find .qckfx -name "*.json" -exec qckfx --validate {} \;
+```
+
+### 4. IDE Integration
+
+Many IDEs can use the JSON schema for real-time validation. The schema is available in the `@qckfx/sdk-schema` package.
+
+## Troubleshooting
+
+### File Not Found
+
+```bash
+$ qckfx --validate nonexistent.json
+Error: ENOENT: no such file or directory, open 'nonexistent.json'
+```
+
+**Solution**: Check the file path and ensure the file exists.
+
+### Permission Errors
+
+```bash
+$ qckfx --validate protected-file.json
+Error: EACCES: permission denied, open 'protected-file.json'
+```
+
+**Solution**: Check file permissions or run with appropriate privileges.
+
+### Invalid JSON
+
+```bash
+$ qckfx --validate malformed.json
+SyntaxError: Unexpected token } in JSON at position 45
+```
+
+**Solution**: Fix the JSON syntax using a JSON validator or formatter.
+
+## Related Commands
+
+- [qckfx Command](/cli/qckfx-command) - Main command reference
+- [Agent Configuration](/sdk/configuration) - Configuration schema details
+- [Sub-agents](/cli/sub-agents) - Sub-agent configuration validation

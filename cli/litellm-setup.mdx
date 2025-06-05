@@ -1,0 +1,402 @@
+---
+title: "LiteLLM Setup"
+description: "Set up LiteLLM proxy for unified model access and API key management"
+icon: "server"
+---
+
+LiteLLM provides a unified interface to multiple model providers, allowing you to use any model with an OpenAI-compatible interface while keeping your API keys private and centralized. This guide shows you how to set up and configure LiteLLM for use with qckfx.
+
+## Why Use LiteLLM?
+
+LiteLLM offers several advantages for agent development:
+
+- **Unified Interface**: Use any model provider through a single OpenAI-compatible API
+- **Centralized API Keys**: Store all your API keys in one secure location
+- **Model Abstraction**: Switch between models without changing your code
+- **Rate Limiting**: Built-in rate limiting and request management
+- **Logging**: Comprehensive request and response logging
+- **Cost Tracking**: Monitor usage and costs across providers
+
+## Quick Start with Docker
+
+The qckfx agent repository includes a pre-configured LiteLLM setup:
+
+### 1. Navigate to LiteLLM Directory
+
+```bash
+cd path/to/agent-core/litellm
+```
+
+### 2. Build the Docker Image
+
+```bash
+docker build -t litellm .
+```
+
+### 3. Run LiteLLM with Your API Keys
+
+```bash
+docker run -p 8001:8001 \
+  -e OPENAI_API_KEY=your_openai_key \
+  -e ANTHROPIC_API_KEY=your_anthropic_key \
+  -e GEMINI_API_KEY=your_gemini_key \
+  -e MISTRAL_API_KEY=your_mistral_key \
+  -e GROQ_API_KEY=your_groq_key \
+  litellm
+```
+
+### 4. Configure qckfx to Use LiteLLM
+
+```bash
+# Set the base URL to your LiteLLM instance
+export LLM_BASE_URL=http://localhost:8001
+
+# Use any model from the LiteLLM configuration
+qckfx -m claude-sonnet-4 "Hello, world!"
+```
+
+<Info>
+The LiteLLM proxy will be available at `http://localhost:8001` and provides an OpenAI-compatible API endpoint.
+</Info>
+
+## Pre-configured Models
+
+The included LiteLLM configuration supports these models out of the box:
+
+### Anthropic Models
+
+| Model Name | Provider Model | Description |
+|------------|----------------|-------------|
+| `claude-sonnet-3-7` | `anthropic/claude-3-7-sonnet-20250219` | Latest Claude 3.7 Sonnet |
+| `claude-sonnet-4` | `anthropic/claude-sonnet-4-20250514` | Claude 4 Sonnet |
+
+### OpenAI Models
+
+| Model Name | Provider Model | Description |
+|------------|----------------|-------------|
+| `o3` | `openai/o3` | OpenAI o3 model |
+| `gpt-o4-mini` | `openai/o4-mini` | GPT-4 Mini variant |
+| `gpt-4.1-mini` | `openai/gpt-4.1-mini` | GPT-4.1 Mini |
+| `gpt-4.1-nano` | `openai/gpt-4.1-nano` | GPT-4.1 Nano |
+
+### Google Models
+
+| Model Name | Provider Model | Description |
+|------------|----------------|-------------|
+| `gemini-2.5-pro` | `gemini/gemini-2.5-pro-preview-03-25` | Gemini 2.5 Pro |
+
+### Mistral Models
+
+| Model Name | Provider Model | Description |
+|------------|----------------|-------------|
+| `devstral-small` | `mistral/devstral-small-2505` | Devstral Small |
+
+### Groq Models
+
+| Model Name | Provider Model | Description |
+|------------|----------------|-------------|
+| `llama-3.1-8b` | `groq/llama-3.1-8b-instant` | Llama 3.1 8B |
+| `qwen-32b` | `groq/qwen-qwq-32b` | Qwen QwQ 32B |
+
+## Configuration File
+
+The LiteLLM configuration is defined in `config.yaml`:
+
+```yaml
+model_list:
+  - model_name: claude-sonnet-4
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_base: https://api.anthropic.com
+      api_key: 'os.environ/ANTHROPIC_API_KEY'
+      drop_params: true
+  
+  - model_name: gemini-2.5-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro-preview-03-25
+      api_key: 'os.environ/GEMINI_API_KEY'
+      drop_params: true
+  
+  # ... more models
+```
+
+### Configuration Options
+
+| Field | Description |
+|-------|-------------|
+| `model_name` | Friendly name used in qckfx commands |
+| `model` | Provider-specific model identifier |
+| `api_base` | Provider API endpoint (optional) |
+| `api_key` | Environment variable containing API key |
+| `drop_params` | Drop unsupported parameters for compatibility |
+
+## Adding New Models
+
+To add support for additional models, edit the `config.yaml` file:
+
+```yaml
+model_list:
+  # ... existing models
+  
+  - model_name: my-custom-model
+    litellm_params:
+      model: provider/model-name
+      api_key: 'os.environ/MY_PROVIDER_API_KEY'
+      drop_params: true
+```
+
+Refer to the [LiteLLM documentation](https://docs.litellm.ai/docs/proxy/configs) for provider-specific configuration options.
+
+## Environment Variables
+
+LiteLLM reads API keys from environment variables:
+
+```bash
+# Required for respective providers
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+export GEMINI_API_KEY=...
+export MISTRAL_API_KEY=...
+export GROQ_API_KEY=gsk_...
+```
+
+<Warning>
+Never commit API keys to version control. Always use environment variables or secure secret management systems.
+</Warning>
+
+## Using with qckfx
+
+Once LiteLLM is running, configure qckfx to use it:
+
+### Environment Variable Method
+
+```bash
+export LLM_BASE_URL=http://localhost:8001
+qckfx -m claude-sonnet-4 "Analyze this codebase"
+```
+
+### Command Line Method
+
+```bash
+qckfx --url http://localhost:8001 -m gemini-2.5-pro "Generate documentation"
+```
+
+### Agent Configuration Method
+
+```json
+{
+  "environment": "local",
+  "defaultModel": "claude-sonnet-4"
+}
+```
+
+Then run with the base URL:
+
+```bash
+export LLM_BASE_URL=http://localhost:8001
+qckfx -a my-agent.json "Execute with LiteLLM"
+```
+
+## Production Deployment
+
+For production use, consider these additional configurations:
+
+### Docker Compose
+
+Create `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+services:
+  litellm:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    restart: unless-stopped
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+```
+
+Run with:
+
+```bash
+docker-compose up -d
+```
+
+### Kubernetes Deployment
+
+Create `litellm-deployment.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: litellm
+  template:
+    metadata:
+      labels:
+        app: litellm
+    spec:
+      containers:
+      - name: litellm
+        image: your-registry/litellm:latest
+        ports:
+        - containerPort: 8001
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-keys
+              key: openai
+        # ... other API keys
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm-service
+spec:
+  selector:
+    app: litellm
+  ports:
+  - port: 8001
+    targetPort: 8001
+  type: LoadBalancer
+```
+
+## Authentication and Security
+
+### API Key Management
+
+For enhanced security, LiteLLM supports API key authentication:
+
+```yaml
+# Add to config.yaml
+general_settings:
+  master_key: your-master-key
+  
+# Use with qckfx
+export LLM_API_KEY=your-master-key
+qckfx -m claude-sonnet-4 "Secure request"
+```
+
+### Rate Limiting
+
+Configure rate limits in `config.yaml`:
+
+```yaml
+general_settings:
+  rpm_limit: 100  # Requests per minute
+  tpm_limit: 10000  # Tokens per minute
+```
+
+## Monitoring and Logging
+
+### Request Logging
+
+Enable detailed logging:
+
+```yaml
+general_settings:
+  set_verbose: true
+  json_logs: true
+```
+
+### Health Checks
+
+LiteLLM provides health check endpoints:
+
+```bash
+# Check if LiteLLM is running
+curl http://localhost:8001/health
+
+# Get model information
+curl http://localhost:8001/v1/models
+```
+
+## Troubleshooting
+
+### Connection Issues
+
+```bash
+$ qckfx --url http://localhost:8001 -m claude-sonnet-4 "test"
+Error: connect ECONNREFUSED 127.0.0.1:8001
+```
+
+**Solutions:**
+- Verify LiteLLM is running: `docker ps`
+- Check port mapping: `docker port <container-id>`
+- Ensure firewall allows port 8001
+
+### Model Not Found
+
+```bash
+Error: Model 'unknown-model' not found
+```
+
+**Solutions:**
+- Check available models: `curl http://localhost:8001/v1/models`
+- Verify model name in `config.yaml`
+- Restart LiteLLM after configuration changes
+
+### API Key Issues
+
+```bash
+Error: Invalid API key for provider
+```
+
+**Solutions:**
+- Verify environment variables are set
+- Check API key format for each provider
+- Ensure keys have necessary permissions
+
+### Configuration Errors
+
+```bash
+Error: Failed to load configuration
+```
+
+**Solutions:**
+- Validate YAML syntax in `config.yaml`
+- Check file permissions
+- Review LiteLLM logs: `docker logs <container-id>`
+
+## Alternative Providers
+
+While LiteLLM is recommended, you can also use:
+
+### OpenRouter
+
+```bash
+export LLM_BASE_URL=https://openrouter.ai/api/v1
+export LLM_API_KEY=sk-or-...
+qckfx -m anthropic/claude-3.5-sonnet "Direct OpenRouter usage"
+```
+
+### Direct Provider APIs
+
+```bash
+# Direct Anthropic
+export LLM_BASE_URL=https://api.anthropic.com
+export LLM_API_KEY=sk-ant-...
+
+# Direct OpenAI
+export LLM_BASE_URL=https://api.openai.com/v1
+export LLM_API_KEY=sk-...
+```
+
+## Related Topics
+
+- [qckfx Command](/cli/qckfx-command) - Using the `--url` and `--api-key` options
+- [Agent Configuration](/sdk/configuration) - Configuring model providers
+- [Environment Setup](/get-started/configuration) - Setting up your development environment
