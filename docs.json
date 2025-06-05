@@ -47,7 +47,12 @@
               "sdk/api-reference",
               "sdk/agent-class",
               "sdk/configuration",
-              "sdk/tools"
+              "sdk/tools",
+              "sdk/built-in-tools",
+              "sdk/types",
+              "sdk/events",
+              "sdk/context-window",
+              "sdk/sessions"
             ]
           }
         ]
