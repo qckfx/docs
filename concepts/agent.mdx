@@ -1,4 +1,223 @@
 ---
-title: "Agent"
-description: "TODO"
+title: "Agent Architecture"
+description: "Deep dive into the Agent class, methods, configuration, and LiteLLM integration"
+icon: "robot"
 ---
+
+The `Agent` class is the primary entry point for the qckfx Agent SDK. It provides a clean, developer-friendly interface for creating and managing AI agents capable of interacting with code, files, and systems.
+
+## The Agent Class
+
+The Agent follows a factory pattern using `Agent.create()` for proper async initialization:
+
+```typescript
+import { Agent } from '@qckfx/agent';
+
+// Create an agent with configuration
+const agent = await Agent.create({
+  config: {
+    environment: 'local', // Only supported environment
+    defaultModel: 'claude-sonnet-3-7', // Model name from your LiteLLM config
+    logLevel: 'info',
+    systemPrompt: 'You are a helpful AI assistant for software development.',
+    tools: ['bash', 'glob', 'grep', 'ls', 'file_read', 'file_edit', 'file_write', 'think', 'batch']
+  },
+  callbacks: {
+    onProcessingCompleted: (data) => console.log('Query completed:', data.response),
+    onToolExecutionStarted: (execution) => console.log(`Tool ${execution.toolName} started`)
+  }
+});
+```
+
+## Key Agent Methods
+
+The Agent class provides several essential methods for interaction:
+
+### `processQuery(query, model?, contextWindow?)`
+
+The primary method for sending natural language queries to your agent:
+
+```typescript
+// Process a query with the default model
+const result = await agent.processQuery("List the files in this directory");
+
+// Process with a specific model
+const result = await agent.processQuery(
+  "Show me the package.json file", 
+  "claude-3-7-sonnet-20240219"
+);
+
+// Continue an existing conversation
+const result = await agent.processQuery("Now edit that file to add a new dependency");
+```
+
+### `invokeTool(toolId, args, sessionState?)`
+
+Execute tools directly while maintaining proper session context:
+
+```typescript
+// Invoke a tool directly
+const result = await agent.invokeTool('file_read', {
+  path: 'package.json'
+});
+
+// Invoke with custom session state
+const customSession = await createSessionState(config);
+const result = await agent.invokeTool('bash', {
+  command: 'ls -la'
+}, customSession);
+```
+
+### `registerTool(tool)`
+
+Add custom tools to extend agent capabilities:
+
+```typescript
+import { createTool, ToolCategory } from '@qckfx/agent';
+
+const customTool = createTool({
+  id: 'my-custom-tool',
+  name: 'Custom Tool',
+  description: 'Performs a custom operation',
+  category: ToolCategory.READONLY,
+  parameters: {
+    input: { type: 'string', description: 'Input parameter' }
+  },
+  requiredParameters: ['input'],
+  execute: async (args, context) => {
+    return { ok: true, data: `Processed: ${args.input}` };
+  }
+});
+
+agent.registerTool(customTool);
+```
+
+## Agent Configuration
+
+The agent configuration uses a strongly-typed schema from `@qckfx/sdk-schema`:
+
+```typescript
+interface AgentConfig {
+  environment: 'local';                   // Only 'local' is currently supported
+  defaultModel?: string;                  // Default model (e.g., 'claude-sonnet-3-7')
+  logLevel?: 'debug' | 'info' | 'warn' | 'error';
+  systemPrompt?: string;                  // Custom system prompt for the agent
+  tools?: string[];                       // Array of tool names to enable
+  experimentalFeatures?: {                // Optional experimental features
+    subAgents?: boolean;
+  };
+}
+```
+
+## Model Management with LiteLLM
+
+The SDK uses the OpenAI SDK with LiteLLM for model provider abstraction. This allows you to use any model with an OpenAI-compatible interface while keeping your API keys private.
+
+### Setting up LiteLLM (Recommended)
+
+LiteLLM provides a unified interface to multiple model providers. Set it up using the included Docker configuration:
+
+```bash
+# Navigate to the LiteLLM directory
+cd agent/litellm
+
+# Build the LiteLLM Docker image
+docker build -t litellm .
+
+# Run LiteLLM with your API keys
+docker run -p 8001:8001 \
+  -e OPENAI_API_KEY=your_openai_key \
+  -e ANTHROPIC_API_KEY=your_anthropic_key \
+  -e GEMINI_API_KEY=your_gemini_key \
+  -e MISTRAL_API_KEY=your_mistral_key \
+  -e GROQ_API_KEY=your_groq_key \
+  litellm
+```
+
+### Available Models
+
+The LiteLLM configuration includes support for multiple providers:
+
+- **Anthropic**: `claude-sonnet-3-7`, `claude-sonnet-4`
+- **OpenAI**: `o3`, `gpt-o4-mini`, `gpt-4.1-mini`, `gpt-4.1-nano`
+- **Google**: `gemini-2.5-pro`
+- **Mistral**: `devstral-small`
+- **Groq**: `llama-3.1-8b`, `qwen-32b`
+
+It is easy to add more, refer to the [litellm documentation](https://docs.litellm.ai/docs/proxy/configs) for more information.
+
+### Environment Variables
+
+Set the LiteLLM base URL to use your local instance:
+
+```bash
+export LLM_BASE_URL=http://localhost:8001
+```
+
+You can also create a key for yourself with LiteLLM if you'd like, read more in the LiteLLM documentation.
+
+## Event System
+
+The Agent provides a comprehensive event system for monitoring operations:
+
+```typescript
+// Subscribe to events
+const unsubscribe = agent.on('tool:execution:started', (execution) => {
+  console.log(`Tool ${execution.toolName} started with args:`, execution.args);
+});
+
+// Unsubscribe when done
+unsubscribe();
+
+// Available events include:
+// - 'processing:started'
+// - 'processing:completed' 
+// - 'processing:error'
+// - 'tool:execution:started'
+// - 'tool:execution:completed'
+// - 'tool:execution:error'
+// - 'environment:status:changed'
+// - 'checkpoint:ready'
+```
+
+## Advanced Agent Features
+
+### Model Management
+
+Query available models and manage LLM providers:
+
+```typescript
+// Get available models
+const models = await Agent.getAvailableModels(apiKey, logger);
+console.log('Available models:', models);
+
+// Use different models for different queries
+const codeResult = await agent.processQuery(
+  "Analyze this code", 
+  "claude-3-7-sonnet-20240219"
+);
+
+const chatResult = await agent.processQuery(
+  "Explain what you found", 
+  "claude-3-haiku-20240307"
+);
+```
+
+### Rollback and Recovery
+
+Implement sophisticated rollback capabilities:
+
+```typescript
+// Rollback to a specific message
+agent.performRollback(messageId);
+
+// Static rollback with custom session
+await Agent.performRollback(sessionState, messageId);
+```
+
+## Next Steps
+
+- Learn about [Session Management](/concepts/sessions) to understand conversation context
+- Explore the [Tool System](/concepts/tools) to extend agent capabilities  
+- Understand [Environment Types](/concepts/environments) for different execution contexts
+- Check out [Getting Started](/get-started) for practical examples
