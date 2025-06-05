@@ -41,7 +41,11 @@
           {
             "group": "SDK",
             "pages": [
-              "sdk/index"
+              "sdk/index",
+              "sdk/api-reference",
+              "sdk/agent-class",
+              "sdk/configuration",
+              "sdk/tools"
             ]
           }
         ]
