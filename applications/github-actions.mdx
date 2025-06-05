@@ -1,5 +1,519 @@
 ---
-title: 'New file'
-description: 'Description of your new file.'
+title: "GitHub Actions Integration"
+description: "Use qckfx CLI in GitHub Actions workflows for automated code analysis, testing, and repository management"
+icon: "github"
 ---
 
+The qckfx CLI can be seamlessly integrated into GitHub Actions workflows to provide AI-powered code analysis, automated testing, documentation generation, and repository management. This enables powerful automation capabilities in your CI/CD pipeline.
+
+## Basic Setup
+
+### Simple Workflow Example
+
+```yaml
+name: AI Code Review
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for better context
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Run AI Code Review
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          npx qckfx << 'EOF'
+          Please review the changes in this pull request. Focus on:
+          1. Code quality and best practices
+          2. Potential bugs or security issues
+          3. Performance considerations
+          4. Documentation completeness
+          
+          Provide a summary of your findings and any recommendations.
+          EOF
+```
+
+### Environment Variables
+
+Set up the required environment variables in your GitHub repository settings:
+
+<CodeGroup>
+```bash Repository Secrets
+# Required: LLM API Key
+LLM_API_KEY=sk-ant-...
+
+# Optional: Custom LLM provider base URL
+LLM_BASE_URL=https://api.openai.com/v1
+```
+
+```yaml Workflow Environment
+env:
+  LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+  # Optional: Override base URL for custom LLM providers
+  LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+```
+</CodeGroup>
+
+## Advanced Use Cases
+
+### Automated Documentation Generation
+
+```yaml
+name: Update Documentation
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'lib/**']
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Generate Documentation
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          npx qckfx << 'EOF'
+          Please update the documentation based on recent code changes:
+          
+          1. Review the git diff since the last documentation update
+          2. Update README.md with any new features or API changes
+          3. Generate or update API documentation for modified functions
+          4. Ensure all examples are current and working
+          5. Update the changelog with a summary of changes
+          EOF
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "docs: automated documentation update"
+          body: "Automated documentation update based on recent code changes"
+          branch: docs/auto-update
+```
+
+### Code Quality Analysis
+
+```yaml
+name: Code Quality Check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Analyze Code Quality
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          npx qckfx << 'EOF'
+          Perform a comprehensive code quality analysis:
+          
+          1. Check for code smells and anti-patterns
+          2. Identify potential performance bottlenecks
+          3. Review error handling and edge cases
+          4. Assess test coverage and suggest missing tests
+          5. Verify adherence to project coding standards
+          
+          Generate a detailed report with specific recommendations.
+          Save the report to quality-report.md
+          EOF
+      
+      - name: Upload Quality Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-report
+          path: quality-report.md
+      
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('quality-report.md')) {
+              const report = fs.readFileSync('quality-report.md', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🤖 AI Code Quality Report\n\n${report}`
+              });
+            }
+```
+
+### Security Audit
+
+```yaml
+name: Security Audit
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM
+  workflow_dispatch:
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Security Analysis
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          npx qckfx << 'EOF'
+          Conduct a security audit of the codebase:
+          
+          1. Scan for common security vulnerabilities (OWASP Top 10)
+          2. Check for hardcoded secrets or sensitive data
+          3. Review authentication and authorization mechanisms
+          4. Analyze input validation and sanitization
+          5. Check for insecure dependencies
+          6. Review API endpoints for security best practices
+          
+          Generate a security report with findings and remediation steps.
+          Save the report to security-audit.md
+          EOF
+      
+      - name: Create Security Issue
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('security-audit.md')) {
+              const report = fs.readFileSync('security-audit.md', 'utf8');
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🔒 Weekly Security Audit - ${new Date().toISOString().split('T')[0]}`,
+                body: report,
+                labels: ['security', 'audit']
+              });
+            }
+```
+
+## Using Custom Agents
+
+### With Agent Configuration Files
+
+```yaml
+name: Custom Agent Analysis
+on:
+  pull_request:
+
+jobs:
+  custom-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Custom Agent
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          npx qckfx --agent .qckfx/agents/code-reviewer.json << 'EOF'
+          Review this pull request for code quality and suggest improvements.
+          EOF
+```
+
+### With Sub-Agents
+
+```yaml
+name: Multi-Agent Analysis
+on:
+  pull_request:
+
+jobs:
+  multi-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Analysis with Sub-Agents
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          npx qckfx --with-subagent security --with-subagent performance << 'EOF'
+          Analyze this codebase using security and performance sub-agents.
+          Provide comprehensive recommendations for improvements.
+          EOF
+```
+
+## Matrix Builds for Multiple Analyses
+
+Run different types of analysis in parallel:
+
+```yaml
+name: Comprehensive AI Analysis
+on:
+  pull_request:
+
+jobs:
+  ai-analysis:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        analysis-type:
+          - security
+          - performance
+          - documentation
+          - testing
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run ${{ matrix.analysis-type }} Analysis
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          case "${{ matrix.analysis-type }}" in
+            security)
+              PROMPT="Focus on security vulnerabilities and best practices"
+              ;;
+            performance)
+              PROMPT="Analyze performance bottlenecks and optimization opportunities"
+              ;;
+            documentation)
+              PROMPT="Review and improve code documentation and comments"
+              ;;
+            testing)
+              PROMPT="Assess test coverage and suggest additional test cases"
+              ;;
+          esac
+          
+          npx qckfx << EOF
+          $PROMPT
+          
+          Provide specific, actionable recommendations for this codebase.
+          Save your analysis to ${{ matrix.analysis-type }}-report.md
+          EOF
+      
+      - name: Upload Analysis Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.analysis-type }}-report
+          path: ${{ matrix.analysis-type }}-report.md
+```
+
+## CLI Options Reference
+
+### Available Command Line Options
+
+```bash
+# Basic usage
+npx qckfx "Your prompt here"
+
+# Use specific model
+npx qckfx --model claude-3-5-sonnet-20241022 "Analyze this code"
+
+# Use custom agent configuration
+npx qckfx --agent my-agent.json "Review the codebase"
+
+# Override API credentials
+npx qckfx --api-key YOUR_API_KEY "Analyze security"
+npx qckfx --url https://custom-api.com/v1 "Review code"
+
+# Continue previous session
+npx qckfx --continue "Follow up on previous analysis"
+
+# Add sub-agent tools
+npx qckfx --with-subagent security performance "Comprehensive analysis"
+
+# Validate agent configuration
+npx qckfx --validate my-agent.json
+```
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `LLM_API_KEY` | API key for your LLM provider | `sk-ant-api03-...` |
+| `LLM_BASE_URL` | Base URL for custom LLM providers | `https://api.openai.com/v1` |
+
+## Best Practices
+
+### 1. Secure API Keys
+
+Store API keys as repository secrets and never commit them to code:
+
+```yaml
+env:
+  LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+```
+
+### 2. Use Specific Models
+
+Specify models based on your needs and budget:
+
+```bash
+npx qckfx --model gemini-2.5-pro  # Default, balanced performance
+npx qckfx --model claude-3-haiku-20240307  # Faster, cheaper
+npx qckfx --model claude-3-5-sonnet-20241022  # Better quality
+```
+
+### 3. Limit Scope with Prompts
+
+Be specific in your prompts to get focused, actionable results:
+
+```bash
+npx qckfx << 'EOF'
+Review only the files changed in this PR for:
+1. TypeScript type safety issues
+2. React component best practices
+3. Performance implications
+
+Ignore formatting and style issues.
+EOF
+```
+
+### 4. Handle Large Repositories
+
+For large repositories, focus analysis on specific areas:
+
+```bash
+npx qckfx << 'EOF'
+Focus your analysis on the src/components directory.
+Ignore node_modules, dist, and test files.
+EOF
+```
+
+### 5. Use Session Continuation
+
+For complex analyses that build on previous work:
+
+```yaml
+- name: Initial Analysis
+  run: npx qckfx "Analyze the codebase architecture"
+
+- name: Follow-up Analysis
+  run: npx qckfx --continue "Based on the previous analysis, suggest refactoring opportunities"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**API Key Not Found:**
+```yaml
+# Ensure the secret is properly set
+env:
+  LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+```
+
+**Out of Memory:**
+```yaml
+# Use a larger runner for large repositories
+runs-on: ubuntu-latest-4-cores
+```
+
+**API Rate Limits:**
+```yaml
+# Add delays between API calls
+- name: Wait between analyses
+  run: sleep 30
+```
+
+**Model Not Available:**
+```bash
+# Check available models for your provider
+npx qckfx --model gemini-2.5-pro "test prompt"
+```
+
+### Debugging
+
+Check the CLI help for current options:
+
+```bash
+npx qckfx --help
+```
+
+Validate your agent configuration:
+
+```bash
+npx qckfx --validate .qckfx/agents/my-agent.json
+```
+
+## Integration Examples
+
+### With Other Actions
+
+Combine qckfx with other GitHub Actions:
+
+```yaml
+- name: Run Tests
+  run: npm test
+
+- name: AI Test Analysis
+  env:
+    LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+  run: |
+    npx qckfx << 'EOF'
+    Analyze the test results and suggest:
+    1. Additional test cases for better coverage
+    2. Improvements to existing tests
+    3. Performance optimizations for the test suite
+    EOF
+
+- name: Deploy if Analysis Passes
+  if: success()
+  run: npm run deploy
+```
+
+### Custom Workflows
+
+Create reusable workflows for common analysis patterns:
+
+```yaml
+# .github/workflows/reusable-ai-review.yml
+name: Reusable AI Review
+on:
+  workflow_call:
+    inputs:
+      focus-area:
+        required: true
+        type: string
+    secrets:
+      llm-api-key:
+        required: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: AI Review
+        env:
+          LLM_API_KEY: ${{ secrets.llm-api-key }}
+        run: |
+          npx qckfx << EOF
+          Focus on ${{ inputs.focus-area }} in this codebase.
+          Provide specific recommendations and examples.
+          EOF
+```
+
+The qckfx CLI's integration with GitHub Actions enables powerful automation capabilities that can significantly improve code quality, security, and development workflows. By leveraging AI-powered analysis in your CI/CD pipeline, you can catch issues early, maintain consistent code quality, and accelerate development cycles.
