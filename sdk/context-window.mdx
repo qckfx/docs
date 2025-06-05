@@ -1,0 +1,471 @@
+---
+title: "Context Window"
+description: "Managing conversation context and message history in the qckfx Agent SDK"
+icon: "window"
+---
+
+The ContextWindow class is a core component of the qckfx Agent SDK that manages conversation context, message history, and file access tracking. It provides a structured way to handle the conversation flow between users and agents while maintaining important metadata.
+
+## Overview
+
+The ContextWindow manages:
+- **Conversation History** - All messages exchanged between user and agent
+- **File Access Tracking** - Records which files have been read during the conversation
+- **Checkpoint Management** - Tracks checkpoint IDs for rollback functionality
+- **Message Validation** - Ensures proper message ordering and structure
+
+## Core Concepts
+
+### Message Types
+
+The ContextWindow handles several types of messages:
+
+```typescript
+type Message = {
+  role: 'user' | 'assistant';
+  content: string | ContentBlock[];
+}
+
+interface ConversationMessage {
+  id: string;                    // Unique message identifier
+  anthropic: Message;            // The actual message content
+  createdAt: number;            // Timestamp when message was created
+  lastCheckpointId?: string;    // Associated checkpoint for rollback
+}
+```
+
+### Content Blocks
+
+Messages can contain different types of content blocks:
+
+```typescript
+type ContentBlock = 
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
+  | { type: 'tool_result'; tool_use_id: string; content: string }
+```
+
+## Creating and Using ContextWindow
+
+### Basic Creation
+
+<CodeGroup>
+```typescript Empty Context
+import { createContextWindow } from '@qckfx/agent';
+
+const context = createContextWindow();
+```
+
+```typescript With Initial Messages
+import { createContextWindow } from '@qckfx/agent';
+
+const initialMessages = [
+  { role: 'user', content: 'Hello!' },
+  { role: 'assistant', content: 'Hi there! How can I help you?' }
+];
+
+const context = createContextWindow(initialMessages);
+```
+</CodeGroup>
+
+### Adding Messages
+
+The ContextWindow provides several methods for adding different types of messages:
+
+<CodeGroup>
+```typescript User Messages
+// Add a simple user message
+const messageId = context.pushUser('What files are in this directory?');
+
+// The message ID can be used for rollback operations
+console.log('Message ID:', messageId);
+```
+
+```typescript Assistant Messages
+// Add assistant response with text
+const messageId = context.pushAssistant('I can help you list the files.');
+
+// Add assistant response with multiple content blocks
+const messageId = context.pushAssistant([
+  { type: 'text', text: 'Let me check the directory for you.' },
+  { type: 'tool_use', id: 'tool_123', name: 'ls', input: { path: '.' } }
+]);
+```
+
+```typescript Tool Messages
+// Add tool use message
+const toolUseId = context.pushToolUse({
+  id: 'tool_123',
+  name: 'FileReadTool',
+  input: { path: 'package.json' }
+});
+
+// Add tool result message
+const resultId = context.pushToolResult('tool_123', {
+  ok: true,
+  data: { content: '{ "name": "my-project" }' }
+});
+```
+</CodeGroup>
+
+## File Access Tracking
+
+The ContextWindow automatically tracks which files have been accessed during the conversation:
+
+<CodeGroup>
+```typescript Recording File Access
+// Record that a file was read
+context.recordFileRead('/path/to/file.ts');
+context.recordFileRead('package.json');
+
+// Check if a file has been read
+if (context.hasReadFile('package.json')) {
+  console.log('Package.json was already read in this context');
+}
+
+// Get all files that have been read
+const readFiles = context.getReadFiles();
+console.log('Files read:', readFiles);
+```
+
+```typescript Clearing File Tracking
+// Clear all file tracking data (useful when context is refreshed)
+context.clearFileTracking();
+```
+</CodeGroup>
+
+## Checkpoint Management
+
+Checkpoints enable rollback functionality by tracking the state at specific points:
+
+<CodeGroup>
+```typescript Managing Checkpoints
+// Set the current checkpoint ID
+context.setLastCheckpointId('checkpoint_abc123');
+
+// Get the current checkpoint ID
+const checkpointId = context.getLastCheckpointId();
+
+// All new messages will inherit this checkpoint ID
+const messageId = context.pushUser('New message');
+```
+
+```typescript Rollback Operations
+// Roll back to a specific message (removes all messages up to and including it)
+const removedCount = context.rollbackToMessage('message_id_123');
+console.log(`Removed ${removedCount} messages`);
+
+// The checkpoint ID is automatically updated to match the latest remaining message
+```
+</CodeGroup>
+
+## Message Retrieval
+
+<CodeGroup>
+```typescript Getting Messages
+// Get raw Anthropic messages (for API calls)
+const messages = context.getMessages();
+
+// Get full conversation messages with metadata
+const conversationMessages = context.getConversationMessages();
+
+// Get the last message
+const lastMessage = context.peek();
+if (lastMessage) {
+  console.log('Last message:', lastMessage.anthropic.content);
+}
+
+// Get conversation length
+const length = context.getLength();
+console.log(`Conversation has ${length} messages`);
+```
+
+```typescript Message Inspection
+const messages = context.getConversationMessages();
+
+messages.forEach((msg, index) => {
+  console.log(`Message ${index}:`);
+  console.log(`  ID: ${msg.id}`);
+  console.log(`  Role: ${msg.anthropic.role}`);
+  console.log(`  Created: ${new Date(msg.createdAt).toISOString()}`);
+  console.log(`  Checkpoint: ${msg.lastCheckpointId || 'none'}`);
+});
+```
+</CodeGroup>
+
+## Context Management
+
+<CodeGroup>
+```typescript Clearing Context
+// Clear all messages
+context.clear();
+
+// Set new messages (replaces all existing messages)
+const newMessages = [
+  { role: 'user', content: 'Starting fresh conversation' }
+];
+context.setMessages(newMessages);
+```
+
+```typescript Context State
+// Check if context is empty
+if (context.getLength() === 0) {
+  console.log('Context is empty');
+}
+
+// Get summary of context state
+console.log({
+  messageCount: context.getLength(),
+  filesRead: context.getReadFiles().length,
+  lastCheckpoint: context.getLastCheckpointId()
+});
+```
+</CodeGroup>
+
+## Message Validation
+
+The ContextWindow automatically validates message structure in development and test environments:
+
+```typescript
+// This validation happens automatically when adding messages
+try {
+  context.pushToolUse({
+    id: 'tool_123',
+    name: 'FileReadTool',
+    input: { path: 'file.txt' }
+  });
+  
+  // This MUST be followed by a matching tool_result
+  context.pushToolResult('tool_123', { ok: true, data: 'file content' });
+} catch (error) {
+  console.error('Message validation failed:', error.message);
+}
+```
+
+**Validation Rules:**
+- Every `tool_use` message must be immediately followed by a matching `tool_result`
+- Tool result `tool_use_id` must match the tool use `id`
+- Validation only runs in development and test environments for performance
+
+## Advanced Usage Patterns
+
+### Context Window with Agent Integration
+
+```typescript
+import { Agent, createContextWindow } from '@qckfx/agent';
+
+class ConversationManager {
+  private context: ContextWindow;
+  private agent: Agent;
+
+  constructor(agent: Agent) {
+    this.agent = agent;
+    this.context = createContextWindow();
+  }
+
+  async processQuery(query: string): Promise<string> {
+    // Add user message to context
+    this.context.pushUser(query);
+    
+    // Process with agent
+    const result = await this.agent.processQuery(query);
+    
+    // Add assistant response to context
+    this.context.pushAssistant(result.response);
+    
+    return result.response;
+  }
+
+  getConversationSummary() {
+    return {
+      messageCount: this.context.getLength(),
+      filesAccessed: this.context.getReadFiles(),
+      lastCheckpoint: this.context.getLastCheckpointId()
+    };
+  }
+
+  rollbackToCheckpoint(checkpointId: string) {
+    const messages = this.context.getConversationMessages();
+    const checkpointMessage = messages.find(m => m.lastCheckpointId === checkpointId);
+    
+    if (checkpointMessage) {
+      this.context.rollbackToMessage(checkpointMessage.id);
+    }
+  }
+}
+```
+
+### File Access Monitoring
+
+```typescript
+class FileAccessMonitor {
+  private context: ContextWindow;
+  private accessLog: Array<{ file: string; timestamp: number }> = [];
+
+  constructor(context: ContextWindow) {
+    this.context = context;
+  }
+
+  recordAccess(filePath: string) {
+    this.context.recordFileRead(filePath);
+    this.accessLog.push({
+      file: filePath,
+      timestamp: Date.now()
+    });
+  }
+
+  getAccessPattern() {
+    const readFiles = this.context.getReadFiles();
+    return {
+      uniqueFiles: readFiles.length,
+      totalAccesses: this.accessLog.length,
+      mostRecentAccess: this.accessLog[this.accessLog.length - 1],
+      accessHistory: this.accessLog
+    };
+  }
+
+  hasAccessedRecently(filePath: string, withinMs: number = 60000): boolean {
+    const recentAccess = this.accessLog
+      .filter(log => log.file === filePath)
+      .find(log => Date.now() - log.timestamp < withinMs);
+    
+    return !!recentAccess;
+  }
+}
+```
+
+## Best Practices
+
+### Memory Management
+
+<CodeGroup>
+```typescript Periodic Cleanup
+class ContextManager {
+  private context: ContextWindow;
+  private maxMessages: number;
+
+  constructor(maxMessages: number = 100) {
+    this.context = createContextWindow();
+    this.maxMessages = maxMessages;
+  }
+
+  addMessage(message: Message) {
+    this.context.push(message);
+    
+    // Keep context size manageable
+    if (this.context.getLength() > this.maxMessages) {
+      this.trimOldMessages();
+    }
+  }
+
+  private trimOldMessages() {
+    const messages = this.context.getConversationMessages();
+    const excess = messages.length - this.maxMessages;
+    
+    if (excess > 0) {
+      // Remove oldest messages but preserve recent checkpoint
+      const oldestToKeep = messages[excess];
+      this.context.rollbackToMessage(oldestToKeep.id);
+    }
+  }
+}
+```
+
+```typescript Smart File Tracking
+class SmartFileTracker {
+  private context: ContextWindow;
+  private fileMetadata = new Map<string, { size: number; lastModified: number }>();
+
+  recordFileAccess(filePath: string, metadata?: { size: number; lastModified: number }) {
+    this.context.recordFileRead(filePath);
+    
+    if (metadata) {
+      this.fileMetadata.set(filePath, metadata);
+    }
+  }
+
+  shouldRereadFile(filePath: string, currentMetadata: { size: number; lastModified: number }): boolean {
+    if (!this.context.hasReadFile(filePath)) {
+      return true; // Never read before
+    }
+
+    const storedMetadata = this.fileMetadata.get(filePath);
+    if (!storedMetadata) {
+      return true; // No metadata stored
+    }
+
+    // Check if file has been modified
+    return storedMetadata.lastModified !== currentMetadata.lastModified ||
+           storedMetadata.size !== currentMetadata.size;
+  }
+}
+```
+</CodeGroup>
+
+### Error Handling
+
+```typescript
+class SafeContextWindow {
+  private context: ContextWindow;
+
+  constructor() {
+    this.context = createContextWindow();
+  }
+
+  safeAddMessage(message: Message): string | null {
+    try {
+      return this.context.push(message);
+    } catch (error) {
+      console.error('Failed to add message to context:', error);
+      return null;
+    }
+  }
+
+  safeRollback(messageId: string): boolean {
+    try {
+      const removed = this.context.rollbackToMessage(messageId);
+      return removed > 0;
+    } catch (error) {
+      console.error('Failed to rollback context:', error);
+      return false;
+    }
+  }
+
+  getContextHealth(): { isValid: boolean; issues: string[] } {
+    const issues: string[] = [];
+    
+    try {
+      const messages = this.context.getConversationMessages();
+      
+      // Check for orphaned tool_use messages
+      for (let i = 0; i < messages.length - 1; i++) {
+        const current = messages[i].anthropic;
+        const next = messages[i + 1].anthropic;
+        
+        if (Array.isArray(current.content) && 
+            current.content[0]?.type === 'tool_use') {
+          if (!Array.isArray(next.content) || 
+              next.content[0]?.type !== 'tool_result') {
+            issues.push(`Tool use at index ${i} missing matching tool result`);
+          }
+        }
+      }
+      
+      return { isValid: issues.length === 0, issues };
+    } catch (error) {
+      return { 
+        isValid: false, 
+        issues: [`Context validation failed: ${error.message}`] 
+      };
+    }
+  }
+}
+```
+
+<Tip>
+Use the ContextWindow's file tracking features to avoid redundant file reads and optimize agent performance.
+</Tip>
+
+<Warning>
+Message validation only runs in development and test environments. Ensure your production code follows proper message ordering to avoid runtime issues.
+</Warning>

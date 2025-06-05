@@ -1,0 +1,399 @@
+---
+title: "Session Management"
+description: "Session state, checkpoints, and rollback functionality in the qckfx Agent SDK"
+icon: "clock"
+---
+
+The qckfx Agent SDK provides session management capabilities that enable stateful conversations, automatic checkpoint creation, and rollback functionality. This system ensures that agents can maintain context across interactions while providing safety mechanisms for undoing changes.
+
+## Overview
+
+Session management in the qckfx Agent SDK includes:
+- **Session State** - Persistent state across agent interactions
+- **Automatic Checkpoints** - Git-based snapshots created before potentially destructive operations
+- **Multi-Repository Support** - Tracking changes across multiple git repositories
+- **Rollback Functionality** - Ability to undo changes and restore previous states
+- **Session Control** - Abort and clear session operations
+
+## Session State
+
+### SessionState Interface
+
+The session state maintains information about the current agent session:
+
+```typescript
+interface SessionState {
+  id: string;                           // Unique session identifier
+  contextWindow: ContextWindow;         // Conversation context with file tracking
+  aborted: boolean;                     // Whether the session is aborted
+  abortController: AbortController;     // Shared AbortController for the session
+  abortedAt?: number;                   // Optional timestamp when session was aborted
+  executionAdapter?: ExecutionAdapter;  // Execution adapter instance
+  multiRepoTracking?: {                 // Multi-repo session tracking
+    repoCount: number;                  // Number of repositories being tracked
+    repoPaths: string[];                // Repository paths being managed
+    directoryStructureGenerated: boolean; // Whether directory structure has been generated
+    lastCheckpointMetadata?: {          // Last checkpoint metadata
+      toolExecutionId: string;
+      timestamp: string;
+      repoCount: number;
+      hostCommits: Record<string, string>; // repo path -> commit sha
+    };
+  };
+  // Additional internal properties...
+}
+```
+
+### Working with Session State
+
+<CodeGroup>
+```typescript Accessing Session State
+import { Agent } from '@qckfx/agent';
+
+// Create agent instance
+const agent = new Agent({
+  defaultModel: 'claude-3-5-sonnet-20241022',
+  systemPrompt: 'You are a helpful coding assistant.',
+  environment: { type: 'local' }
+});
+
+// Process a query (session state is managed internally)
+const result = await agent.processQuery('How many files are in this directory?');
+console.log(result.response);
+```
+
+```typescript Multi-Repository Information
+// Get multi-repo tracking information
+const sessionState = /* internal session state */;
+const multiRepoInfo = Agent.getMultiRepoInfo(sessionState);
+
+if (multiRepoInfo) {
+  console.log('Repository count:', multiRepoInfo.repoCount);
+  console.log('Repository paths:', multiRepoInfo.repoPaths);
+  console.log('Directory structure generated:', multiRepoInfo.directoryStructureGenerated);
+  
+  if (multiRepoInfo.lastCheckpointMetadata) {
+    console.log('Last checkpoint:', multiRepoInfo.lastCheckpointMetadata.toolExecutionId);
+    console.log('Checkpoint timestamp:', multiRepoInfo.lastCheckpointMetadata.timestamp);
+  }
+}
+```
+</CodeGroup>
+
+## Checkpoint System
+
+The checkpoint system automatically creates git-based snapshots of repository state before potentially destructive operations, enabling safe rollback functionality.
+
+### How Checkpoints Work
+
+1. **Automatic Creation** - Checkpoints are created before file modifications and shell commands
+2. **Git Shadow Repositories** - Uses git shadow repositories to track changes without affecting the main repo
+3. **Multi-Repository** - Supports tracking multiple repositories simultaneously
+4. **Efficient Storage** - Uses git's efficient storage mechanisms with bundles
+
+### Checkpoint Events
+
+```typescript
+import { BusEvent } from '@qckfx/agent';
+
+// Listen for checkpoint creation
+agent.on(BusEvent.CHECKPOINT_READY, (data) => {
+  console.log('Checkpoint created for session:', data.sessionId);
+  console.log('Tool execution ID:', data.toolExecutionId);
+  console.log('Repository count:', data.repoCount);
+  console.log('Timestamp:', data.timestamp);
+  
+  // Access commit information
+  data.hostCommits.forEach((commit, repoPath) => {
+    console.log(`${repoPath}: ${commit}`);
+  });
+});
+```
+
+### Checkpoint Implementation Details
+
+The checkpoint system uses git shadow repositories to create snapshots:
+
+- **Shadow Directory**: `.agent-shadow/{sessionId}` in each repository
+- **Git Bundles**: Efficient storage format for checkpoint data
+- **Automatic Exclusions**: Ignores `node_modules/`, `.git/`, `dist/`, and other common build artifacts
+- **Host Repository Integration**: Shadow directories are automatically added to `.git/info/exclude`
+
+## Rollback Functionality
+
+The rollback system allows you to undo changes and restore repositories to a previous checkpoint state.
+
+### Rolling Back to Previous State
+
+```typescript
+// Rollback to a specific message in the conversation
+const messageId = 'msg_xyz789'; // Message ID from conversation history
+const restoredCommits = await agent.performRollback(messageId);
+
+console.log('Rollback completed');
+restoredCommits.forEach((commitSha, repoPath) => {
+  console.log(`Restored ${repoPath} to ${commitSha}`);
+});
+```
+
+### Static Rollback Method
+
+```typescript
+// Static method for rollback without agent instance
+const sessionState = /* your session state */;
+const messageId = 'msg_xyz789';
+
+const restoredCommits = await Agent.performRollback(sessionState, messageId);
+console.log('Rollback completed:', restoredCommits);
+```
+
+### Rollback Events
+
+```typescript
+// Listen for rollback completion
+agent.on(BusEvent.ROLLBACK_COMPLETED, (data) => {
+  console.log('Rollback completed for session:', data.sessionId);
+  console.log('Primary commit SHA:', data.commitSha);
+  console.log('Repository count:', data.repoCount);
+  
+  // Access detailed restore information
+  data.restoredCommits.forEach((commit, repoPath) => {
+    console.log(`Restored ${repoPath} to ${commit}`);
+  });
+});
+```
+
+## Multi-Repository Support
+
+The session management system can track and manage multiple git repositories simultaneously.
+
+### Repository Information
+
+```typescript
+// Get repository count for a session
+const repoCount = Agent.getRepositoryCount(sessionState);
+console.log('Tracking repositories:', repoCount);
+
+// Get repository paths for a session
+const repoPaths = Agent.getRepositoryPaths(sessionState);
+repoPaths.forEach(path => {
+  console.log('Repository path:', path);
+});
+```
+
+### Multi-Repository Tracking
+
+The system automatically discovers and tracks git repositories in the working directory:
+
+- **Automatic Discovery** - Repositories are discovered during the first query
+- **Directory Structure Generation** - File structures are mapped for each repository
+- **Git State Tracking** - Current branch, commit SHA, and status are tracked
+- **Checkpoint Coordination** - All repositories are checkpointed together
+
+## Session Control
+
+### Session Abortion
+
+```typescript
+// Abort the current session operation
+agent.abort();
+
+// Check if session is aborted
+if (agent.isAborted()) {
+  console.log('Session is currently aborted');
+}
+
+// Clear abort status
+agent.clearAbort();
+```
+
+### Context Window Management
+
+```typescript
+// Create a context window with initial messages
+const messages = [
+  { role: 'user', content: [{ type: 'text', text: 'Hello' }] }
+];
+const contextWindow = await Agent.createContextWindow(messages);
+
+// Use context window in query
+const result = await agent.processQuery(
+  'Continue our conversation',
+  'claude-3-5-sonnet-20241022',
+  contextWindow
+);
+```
+
+## Event System
+
+The agent provides a comprehensive event system for monitoring session activities:
+
+### Available Events
+
+```typescript
+import { BusEvent } from '@qckfx/agent';
+
+// Processing events
+agent.on(BusEvent.PROCESSING_STARTED, (data) => {
+  console.log('Processing started for session:', data.sessionId);
+});
+
+agent.on(BusEvent.PROCESSING_COMPLETED, (data) => {
+  console.log('Processing completed:', data.response);
+});
+
+agent.on(BusEvent.PROCESSING_ERROR, (data) => {
+  console.error('Processing error:', data.error);
+});
+
+agent.on(BusEvent.PROCESSING_ABORTED, (data) => {
+  console.log('Processing aborted for session:', data.sessionId);
+});
+
+// Tool execution events
+agent.on(BusEvent.TOOL_EXECUTION_STARTED, (data) => {
+  console.log(`Tool ${data.toolName} started:`, data.toolId);
+});
+
+agent.on(BusEvent.TOOL_EXECUTION_COMPLETED, (data) => {
+  console.log(`Tool ${data.toolName} completed in ${data.executionTime}ms`);
+});
+
+agent.on(BusEvent.TOOL_EXECUTION_ERROR, (data) => {
+  console.error(`Tool ${data.toolName} failed:`, data.error);
+});
+
+// Environment events
+agent.on(BusEvent.ENVIRONMENT_STATUS_CHANGED, (data) => {
+  console.log('Environment status:', data.status);
+});
+```
+
+### Unsubscribing from Events
+
+```typescript
+// Subscribe to an event and get unsubscribe function
+const unsubscribe = agent.on(BusEvent.CHECKPOINT_READY, (data) => {
+  console.log('Checkpoint ready:', data.toolExecutionId);
+});
+
+// Later, unsubscribe
+unsubscribe();
+
+// Or unsubscribe directly
+const handler = (data) => console.log('Event:', data);
+agent.on(BusEvent.PROCESSING_COMPLETED, handler);
+agent.off(BusEvent.PROCESSING_COMPLETED, handler);
+```
+
+## Tool Invocation
+
+### Manual Tool Execution
+
+```typescript
+// Execute a tool manually while preserving session bookkeeping
+const result = await agent.invokeTool('file_read', {
+  path: 'package.json'
+});
+
+console.log('File content:', result);
+
+// Tool execution with existing session state
+const sessionState = /* your session state */;
+const result = await agent.invokeTool('bash', {
+  command: 'ls -la'
+}, sessionState);
+```
+
+## Best Practices
+
+### Session Management
+
+```typescript
+class SessionManager {
+  private agent: Agent;
+
+  constructor() {
+    this.agent = new Agent({
+      defaultModel: 'claude-3-5-sonnet-20241022',
+      systemPrompt: 'You are a helpful coding assistant.',
+      environment: { type: 'local' }
+    });
+    
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers() {
+    // Monitor checkpoints
+    this.agent.on(BusEvent.CHECKPOINT_READY, (data) => {
+      console.log(`Checkpoint created: ${data.toolExecutionId}`);
+    });
+
+    // Handle rollbacks
+    this.agent.on(BusEvent.ROLLBACK_COMPLETED, (data) => {
+      console.log(`Rollback completed for ${data.repoCount} repositories`);
+    });
+
+    // Monitor errors
+    this.agent.on(BusEvent.PROCESSING_ERROR, (data) => {
+      console.error('Processing error:', data.error);
+      // Consider creating a checkpoint before error state
+    });
+  }
+
+  async safeOperation(query: string): Promise<string> {
+    try {
+      const result = await this.agent.processQuery(query);
+      return result.response || '';
+    } catch (error) {
+      console.error('Operation failed:', error);
+      // Session state and checkpoints are automatically managed
+      throw error;
+    }
+  }
+
+  async rollbackToMessage(messageId: string): Promise<void> {
+    try {
+      await this.agent.performRollback(messageId);
+      console.log('Successfully rolled back to message:', messageId);
+    } catch (error) {
+      console.error('Rollback failed:', error);
+      throw error;
+    }
+  }
+}
+```
+
+### Error Handling
+
+```typescript
+// Robust error handling with session management
+async function processWithErrorHandling(agent: Agent, query: string) {
+  try {
+    const result = await agent.processQuery(query);
+    return result;
+  } catch (error) {
+    console.error('Query processing failed:', error);
+    
+    // Check if session was aborted
+    if (agent.isAborted()) {
+      console.log('Operation was aborted by user');
+      agent.clearAbort(); // Reset for next operation
+    }
+    
+    throw error;
+  }
+}
+```
+
+<Tip>
+Checkpoints are created automatically before potentially destructive operations. The system uses git shadow repositories to ensure your main repository remains clean.
+</Tip>
+
+<Warning>
+Rollback operations will discard any uncommitted changes in the working directory. The system restores files to the exact state they were in at the checkpoint.
+</Warning>
+
+<Info>
+Multi-repository tracking is automatically enabled when multiple git repositories are detected in the working directory. Each repository maintains its own checkpoint history.
+</Info>

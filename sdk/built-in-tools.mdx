@@ -1,0 +1,322 @@
+---
+title: "Built-in Tools"
+description: "Complete reference for all built-in tools available to qckfx agents"
+icon: "toolbox"
+---
+
+The qckfx Agent SDK comes with a comprehensive set of built-in tools that provide agents with powerful capabilities for file system operations, shell execution, and code analysis. These tools are automatically available to every agent instance.
+
+## File System Tools
+
+### FileReadTool
+
+Reads the contents of files in the filesystem with support for partial reading and line numbering.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Read the package.json file');
+```
+
+```typescript Parameters
+interface FileReadToolArgs {
+  path: string;           // Path to the file to read
+  lineOffset?: number;    // Line number to start reading from (0-based)
+  lineCount?: number;     // Maximum number of lines to read
+  maxSize?: number;       // Maximum file size in bytes
+  numberLines?: boolean;  // Whether to prefix lines with numbers
+  encoding?: string;      // File encoding (default: 'utf8')
+}
+```
+</CodeGroup>
+
+**Features:**
+- Handles text files with various encodings
+- Supports partial file reading with line offset and count
+- 500KB hard cap for performance and safety
+- Line numbering for easier code review
+- Pagination support for large files
+
+### FileEditTool
+
+Modifies existing files by replacing specific content with precise targeting.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Replace the old function with a new implementation');
+```
+
+```typescript Parameters
+interface FileEditToolArgs {
+  path: string;        // Path to the file to edit
+  searchCode: string;  // Code snippet to search for (must match exactly once)
+  replaceCode: string; // New code to replace the matched code with
+  encoding?: string;   // File encoding (default: 'utf8')
+}
+```
+</CodeGroup>
+
+**Features:**
+- Ensures precise targeting of text to be replaced
+- Preserves file structure and formatting
+- Maintains file encodings during edits
+- Requires exact match for safety
+- Supports deletion by using empty string for replaceCode
+
+### FileWriteTool
+
+Creates new files with specified content or completely replaces existing ones.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Create a new README.md file');
+```
+
+```typescript Parameters
+interface FileWriteToolArgs {
+  path: string;        // Path where the file should be created
+  content: string;     // Content to write to the file
+  overwrite?: boolean; // Whether to overwrite existing files
+  createDir?: boolean; // Whether to create parent directories
+  encoding?: string;   // File encoding (default: 'utf8')
+}
+```
+</CodeGroup>
+
+**Features:**
+- Creates new files or overwrites existing ones
+- Automatic parent directory creation
+- Various text encoding support
+- Safety checks for overwrite operations
+
+### LSTool
+
+Lists files and directories with detailed information and filtering options.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('List all files in the src directory');
+```
+
+```typescript Parameters
+interface LSToolArgs {
+  path?: string;        // Directory to list (default: current directory)
+  showHidden?: boolean; // Include hidden files starting with '.'
+  details?: boolean;    // Show detailed file information
+  limit?: number;       // Maximum number of entries to return
+}
+```
+</CodeGroup>
+
+**Features:**
+- Directory exploration capabilities
+- Hidden file visibility control
+- Detailed file information (size, dates, permissions)
+- Entry count limiting for performance
+
+## Search and Discovery Tools
+
+### GlobTool
+
+Fast file pattern matching tool for finding files by name patterns across the codebase.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Find all TypeScript files in the project');
+```
+
+```typescript Parameters
+interface GlobToolArgs {
+  pattern: string;     // Glob pattern to match files
+  cwd?: string;        // Base directory for search
+  dot?: boolean;       // Include .dot files in results
+  nodir?: boolean;     // Only return files (not directories)
+  maxResults?: number; // Limit number of results
+}
+```
+</CodeGroup>
+
+**Features:**
+- Powerful glob patterns for flexible matching
+- Cross-codebase file searching
+- Hidden file inclusion control
+- Directory filtering options
+- Result limiting for performance
+
+### GrepTool
+
+Fast content search tool that searches file contents using patterns or regular expressions.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Find all functions that contain "create" in their name');
+```
+
+```typescript Parameters
+interface GrepToolArgs {
+  pattern: string;        // Search pattern (text or regex)
+  path?: string;          // Directory or file path to search
+  filePattern?: string;   // Glob pattern to filter files
+  ignoreCase?: boolean;   // Case-insensitive searching
+  recursive?: boolean;    // Search subdirectories recursively
+  maxResults?: number;    // Maximum number of results
+}
+```
+</CodeGroup>
+
+**Features:**
+- Regular expression support
+- Recursive directory traversal
+- File type filtering
+- Case-sensitive/insensitive options
+- Result limiting for performance
+
+## Shell Execution Tools
+
+### BashTool
+
+Executes shell commands in the agent's environment with full shell feature support.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Install npm dependencies');
+```
+
+```typescript Parameters
+interface BashToolArgs {
+  command: string;     // Shell command to execute
+  workingDir?: string; // Working directory for execution
+}
+```
+</CodeGroup>
+
+**Features:**
+- Maintains state between command executions
+- Supports all standard shell features
+- Working directory specification
+- 100KB output limit per stream (stdout/stderr)
+- Environment variable persistence
+- **Always requires permission** for security
+
+<Warning>
+BashTool always requires user permission before execution for security reasons. This cannot be overridden even in fast-edit mode.
+</Warning>
+
+## Advanced Tools
+
+### BatchTool
+
+Executes multiple tool invocations in a single request for improved performance and reduced latency.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Read multiple configuration files at once');
+```
+
+```typescript Parameters
+interface BatchToolArgs {
+  description: string;  // Short description of the batch operation
+  invocations: Array<{
+    tool_name: string;  // Name of the tool to invoke
+    input: object;      // Input parameters for the tool
+  }>;
+}
+```
+</CodeGroup>
+
+**Features:**
+- Parallel execution when possible
+- Serial execution for dependent operations
+- Reduced context usage and latency
+- Collected results from all invocations
+- Respects individual tool permissions
+
+### ThinkTool
+
+Allows the model to perform self-reflection and complex reasoning without external actions.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Think about the best approach to refactor this code');
+```
+
+```typescript Parameters
+interface ThinkToolArgs {
+  thought: string;  // The thought or reasoning to record
+}
+```
+</CodeGroup>
+
+**Features:**
+- Self-reflection capabilities
+- Complex reasoning support
+- No external system changes
+- Thought logging and tracking
+- Brainstorming and analysis support
+
+### SubAgentTool (Beta)
+
+Allows the use of specialized sub-agents for specific tasks.
+
+<CodeGroup>
+```typescript Usage
+const result = await agent.processQuery('Use a specialized agent to analyze this codebase');
+```
+
+```typescript Parameters
+interface SubAgentToolArgs {
+  query: string;  // Natural language query for the sub-agent
+}
+```
+</CodeGroup>
+
+**Features:**
+- Specialized agent delegation
+- Task-specific expertise
+- Isolated execution context
+- Natural language interface
+- Beta feature with ongoing development
+
+## Tool Categories
+
+Tools are organized into categories for better organization and permission management:
+
+- **FILE_OPERATIONS** - FileReadTool, FileEditTool, FileWriteTool, LSTool
+- **SEARCH_DISCOVERY** - GlobTool, GrepTool
+- **SHELL_EXECUTION** - BashTool
+- **BATCH_OPERATIONS** - BatchTool
+- **REFLECTION** - ThinkTool
+- **SUB_AGENTS** - SubAgentTool
+
+## Permission System
+
+Tools integrate with the agent's permission system:
+
+- **Normal Mode** - Requests permission for potentially dangerous operations
+- **Fast-Edit Mode** - Allows file operations without approval, but shell commands still require permission
+- **Dangerous Mode** - Allows all operations without permission (use only in secure, sandboxed environments)
+
+<Tip>
+Use the appropriate permission mode for your use case. Fast-edit mode is ideal for development workflows, while dangerous mode should only be used in secure, automated environments.
+</Tip>
+
+## Best Practices
+
+### File Operations
+- Use FileReadTool instead of `cat`, `head`, or `tail` for more reliable results
+- Include sufficient context in FileEditTool's searchCode to ensure unique matches
+- Use FileWriteTool for creating new files, FileEditTool for targeted edits
+
+### Search Operations
+- Prefer GlobTool over `find` command for file discovery
+- Prefer GrepTool over `grep` command for content searching
+- Use specific patterns to limit results and improve performance
+
+### Shell Execution
+- Use BashTool sparingly and only when necessary
+- Prefer specialized tools (FileReadTool, GlobTool, etc.) over shell commands
+- Always verify commands in safe environments before using dangerous mode
+
+### Performance
+- Use BatchTool for multiple independent operations
+- Limit search results with maxResults parameters
+- Use specific patterns and paths to reduce search scope

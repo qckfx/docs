@@ -1,0 +1,383 @@
+---
+title: "Event System"
+description: "Event types and callback interfaces for the qckfx Agent SDK"
+icon: "bell"
+---
+
+The qckfx Agent SDK provides a comprehensive event system that allows you to monitor and respond to various agent activities in real-time. This includes processing lifecycle events, tool execution events, environment status changes, and more.
+
+## Event Categories
+
+The event system is organized into several categories, each with specific event types and data structures.
+
+### Processing Lifecycle Events
+
+These events track the overall processing lifecycle of agent queries.
+
+#### ProcessingEvents.STARTED
+Fired when the agent begins processing a new query.
+
+```typescript
+interface ProcessingStartedData {
+  sessionId: string;  // Unique session identifier
+  query: string;      // The user query being processed
+  model: string;      // LLM model being used
+}
+```
+
+#### ProcessingEvents.COMPLETED
+Fired when the agent successfully completes processing a query.
+
+```typescript
+interface ProcessingCompletedData {
+  sessionId: string;     // Unique session identifier
+  response: string;      // The agent's response
+  executionTime?: number; // Total execution time in milliseconds
+}
+```
+
+#### ProcessingEvents.ERROR
+Fired when an error occurs during query processing.
+
+```typescript
+interface ProcessingErrorData {
+  sessionId: string;
+  error: {
+    message: string;  // Error message
+    stack?: string;   // Stack trace (if available)
+  };
+}
+```
+
+#### ProcessingEvents.ABORTED
+Fired when query processing is aborted (e.g., user interrupt).
+
+```typescript
+interface ProcessingAbortedData {
+  sessionId: string;  // Unique session identifier
+}
+```
+
+### Tool Execution Events
+
+These events provide detailed information about individual tool executions.
+
+#### ToolExecutionEvents.STARTED
+Fired when a tool begins execution.
+
+#### ToolExecutionEvents.COMPLETED
+Fired when a tool completes execution successfully.
+
+#### ToolExecutionEvents.ERROR
+Fired when a tool execution encounters an error.
+
+All tool execution events use the `ToolExecutionState` interface:
+
+```typescript
+interface ToolExecutionState {
+  sessionId: string;
+  toolId: string;
+  executionId: string;
+  status: ToolExecutionStatus;
+  args: Record<string, unknown>;
+  result?: ToolResult;
+  error?: string;
+  startTime: number;
+  endTime?: number;
+}
+```
+
+### Environment Events
+
+These events track the status of the execution environment.
+
+#### EnvironmentEvents.STATUS_CHANGED
+Fired when the environment status changes (e.g., connecting, connected, error).
+
+```typescript
+interface EnvironmentStatusData {
+  sessionId: string;
+  environmentType: 'local' | 'docker' | 'remote';
+  status: 'initializing' | 'connecting' | 'connected' | 'disconnected' | 'error';
+  isReady: boolean;
+  error?: string;
+}
+```
+
+### Checkpoint Events
+
+These events are related to the agent's checkpoint and rollback system.
+
+#### CheckpointEvents.READY
+Fired when a new checkpoint is created and ready for potential rollback.
+
+```typescript
+interface CheckpointData {
+  sessionId: string;
+  toolExecutionId: string;
+  hostCommits: Map<string, string>;   // repo path -> commit sha
+  shadowCommits: Map<string, string>; // repo path -> shadow commit sha
+  bundles: Map<string, Uint8Array>;   // repo path -> bundle
+  repoCount: number;
+  timestamp: string;
+}
+```
+
+### Rollback Events
+
+These events track rollback operations.
+
+#### RollbackEvents.COMPLETED
+Fired when a rollback operation completes.
+
+```typescript
+interface RollbackData {
+  sessionId: string;
+  commitSha: string;                    // First repo's commit SHA (backwards compatibility)
+  restoredCommits: Map<string, string>; // repo path -> commit sha
+  repoCount: number;
+}
+```
+
+### Permission Events
+
+These events are fired when tools request user permission.
+
+#### PermissionEvents.REQUESTED
+Fired when a tool requires user permission before execution.
+
+```typescript
+interface PermissionData {
+  sessionId: string;
+  toolId: string;
+  args: Record<string, unknown>;
+}
+```
+
+## Event Bus Integration
+
+The Agent SDK uses a typed event bus system that provides type-safe event handling.
+
+### BusEvent Enum
+
+```typescript
+enum BusEvent {
+  PROCESSING_STARTED = 'processing:started',
+  PROCESSING_COMPLETED = 'processing:completed',
+  PROCESSING_ERROR = 'processing:error',
+  PROCESSING_ABORTED = 'processing:aborted',
+  TOOL_EXECUTION_STARTED = 'tool:execution:started',
+  TOOL_EXECUTION_COMPLETED = 'tool:execution:completed',
+  TOOL_EXECUTION_ERROR = 'tool:execution:error',
+  ENVIRONMENT_STATUS_CHANGED = 'environment:status_changed',
+  CHECKPOINT_READY = 'checkpoint:ready',
+  ROLLBACK_COMPLETED = 'rollback:completed',
+  PERMISSION_REQUESTED = 'permission:requested',
+}
+```
+
+### Event Listening
+
+You can listen to events using the agent's event system:
+
+<CodeGroup>
+```typescript Callback-based Listening
+const agent = new Agent({
+  defaultModel: 'claude-3-5-sonnet-20241022',
+  systemPrompt: 'You are a helpful coding assistant.',
+  callbacks: {
+    onProcessingStarted: (data) => {
+      console.log(`Started processing: ${data.query}`);
+    },
+    onProcessingCompleted: (data) => {
+      console.log(`Completed in ${data.executionTime}ms`);
+    },
+    onProcessingError: (data) => {
+      console.error(`Error: ${data.error.message}`);
+    },
+    onToolExecutionStarted: (data) => {
+      console.log(`Tool ${data.toolId} started`);
+    },
+    onEnvironmentStatusChanged: (data) => {
+      console.log(`Environment ${data.environmentType} is ${data.status}`);
+    }
+  }
+});
+```
+
+```typescript Event Bus Listening
+// Listen to specific events
+agent.on(BusEvent.PROCESSING_STARTED, (data) => {
+  console.log(`Processing started: ${data.query}`);
+});
+
+agent.on(BusEvent.TOOL_EXECUTION_COMPLETED, (data) => {
+  console.log(`Tool ${data.toolId} completed successfully`);
+});
+
+// Listen to all events
+agent.on('*', (eventName, data) => {
+  console.log(`Event: ${eventName}`, data);
+});
+```
+</CodeGroup>
+
+## Event Patterns
+
+### Monitoring Tool Execution
+
+```typescript
+agent.on(BusEvent.TOOL_EXECUTION_STARTED, (data) => {
+  console.log(`🔧 ${data.toolId} started with args:`, data.args);
+});
+
+agent.on(BusEvent.TOOL_EXECUTION_COMPLETED, (data) => {
+  const duration = data.endTime! - data.startTime;
+  console.log(`✅ ${data.toolId} completed in ${duration}ms`);
+});
+
+agent.on(BusEvent.TOOL_EXECUTION_ERROR, (data) => {
+  console.error(`❌ ${data.toolId} failed:`, data.error);
+});
+```
+
+### Tracking Processing Lifecycle
+
+```typescript
+let processingStartTime: number;
+
+agent.on(BusEvent.PROCESSING_STARTED, (data) => {
+  processingStartTime = Date.now();
+  console.log(`🚀 Started processing: "${data.query}"`);
+});
+
+agent.on(BusEvent.PROCESSING_COMPLETED, (data) => {
+  const totalTime = Date.now() - processingStartTime;
+  console.log(`🎉 Completed in ${totalTime}ms: "${data.response.substring(0, 100)}..."`);
+});
+```
+
+### Environment Monitoring
+
+```typescript
+agent.on(BusEvent.ENVIRONMENT_STATUS_CHANGED, (data) => {
+  switch (data.status) {
+    case 'initializing':
+      console.log('🔄 Environment initializing...');
+      break;
+    case 'connected':
+      console.log('✅ Environment ready');
+      break;
+    case 'error':
+      console.error('❌ Environment error:', data.error);
+      break;
+  }
+});
+```
+
+### Permission Handling
+
+```typescript
+agent.on(BusEvent.PERMISSION_REQUESTED, (data) => {
+  console.log(`🔐 Permission requested for ${data.toolId}`);
+  console.log('Args:', data.args);
+  
+  // You could implement custom permission logic here
+  // Note: The actual permission response is handled by the agent's permission system
+});
+```
+
+## Best Practices
+
+### Event Handler Organization
+
+```typescript
+class AgentMonitor {
+  constructor(private agent: Agent) {
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers() {
+    // Group related event handlers
+    this.setupProcessingHandlers();
+    this.setupToolHandlers();
+    this.setupEnvironmentHandlers();
+  }
+
+  private setupProcessingHandlers() {
+    this.agent.on(BusEvent.PROCESSING_STARTED, this.onProcessingStarted.bind(this));
+    this.agent.on(BusEvent.PROCESSING_COMPLETED, this.onProcessingCompleted.bind(this));
+    this.agent.on(BusEvent.PROCESSING_ERROR, this.onProcessingError.bind(this));
+  }
+
+  private setupToolHandlers() {
+    this.agent.on(BusEvent.TOOL_EXECUTION_STARTED, this.onToolStarted.bind(this));
+    this.agent.on(BusEvent.TOOL_EXECUTION_COMPLETED, this.onToolCompleted.bind(this));
+  }
+
+  private setupEnvironmentHandlers() {
+    this.agent.on(BusEvent.ENVIRONMENT_STATUS_CHANGED, this.onEnvironmentChanged.bind(this));
+  }
+
+  private onProcessingStarted(data: ProcessingStartedData) {
+    // Handle processing started
+  }
+
+  // ... other handlers
+}
+```
+
+### Error Handling in Event Listeners
+
+```typescript
+agent.on(BusEvent.PROCESSING_ERROR, (data) => {
+  try {
+    // Log error details
+    console.error('Processing failed:', {
+      sessionId: data.sessionId,
+      message: data.error.message,
+      stack: data.error.stack
+    });
+
+    // Notify external systems
+    notifyErrorTrackingService(data.error);
+    
+    // Update UI state
+    updateUIErrorState(data.error.message);
+  } catch (handlerError) {
+    console.error('Error in event handler:', handlerError);
+  }
+});
+```
+
+### Performance Monitoring
+
+```typescript
+const performanceMetrics = new Map<string, number>();
+
+agent.on(BusEvent.TOOL_EXECUTION_STARTED, (data) => {
+  performanceMetrics.set(data.executionId, data.startTime);
+});
+
+agent.on(BusEvent.TOOL_EXECUTION_COMPLETED, (data) => {
+  const startTime = performanceMetrics.get(data.executionId);
+  if (startTime && data.endTime) {
+    const duration = data.endTime - startTime;
+    console.log(`Tool ${data.toolId} took ${duration}ms`);
+    
+    // Track slow tools
+    if (duration > 5000) {
+      console.warn(`Slow tool execution: ${data.toolId} took ${duration}ms`);
+    }
+  }
+  performanceMetrics.delete(data.executionId);
+});
+```
+
+<Tip>
+Event handlers should be lightweight and avoid blocking operations. For heavy processing, consider using async handlers or queuing work for later processing.
+</Tip>
+
+<Warning>
+Be careful with error handling in event listeners. Unhandled errors in event handlers can cause the agent to become unstable.
+</Warning>

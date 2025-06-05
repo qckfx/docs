@@ -1,0 +1,610 @@
+---
+title: "Core Types"
+description: "Essential types and interfaces for qckfx Agent SDK development"
+icon: "brackets-curly"
+---
+
+The qckfx Agent SDK provides a comprehensive type system that ensures type safety and developer productivity. This reference covers all essential types and interfaces used throughout the SDK.
+
+## Agent Types
+
+### ProcessQueryResult
+
+The result returned when processing a query with an agent.
+
+```typescript
+interface ProcessQueryResult {
+  result?: {
+    toolResults: ToolResultEntry[];  // Results from all tool executions
+    iterations: number;              // Number of processing iterations
+  };
+  response?: string;                 // Agent's response (may be undefined if rollback occurred)
+  contextWindow: ContextWindow;      // Updated conversation context
+  done: boolean;                     // Whether processing completed successfully
+  error?: string;                    // Error message if processing failed
+  aborted?: boolean;                 // Whether the operation was aborted
+}
+```
+
+### ToolResultEntry
+
+Information about a single tool execution within a query.
+
+```typescript
+interface ToolResultEntry {
+  toolId: string;                    // Identifier of the executed tool
+  args: Record<string, unknown>;     // Arguments passed to the tool
+  result: unknown;                   // Result returned by the tool
+  toolUseId?: string;               // Unique ID for this tool use
+  aborted?: boolean;                // Whether the tool execution was aborted
+}
+```
+
+### ConversationResult
+
+Result from processing multiple queries in a conversation.
+
+```typescript
+interface ConversationResult {
+  responses: string[];                    // All agent responses
+  sessionState: Record<string, unknown>;  // Final session state
+}
+```
+
+## Tool System Types
+
+### Tool Interface
+
+The core interface that all tools must implement.
+
+```typescript
+interface Tool<Res extends ToolResult = ToolResult> {
+  id: string;                        // Unique tool identifier
+  name: string;                      // Human-readable tool name
+  description: string;               // Tool description for the LLM
+  requiresPermission: boolean;       // Whether tool requires user permission
+  parameters: Record<string, ParameterSchema>;  // Tool parameter definitions
+  requiredParameters: string[];      // List of required parameter names
+  category?: ToolCategory | ToolCategory[];     // Tool categorization
+  alwaysRequirePermission?: boolean; // Override fast-edit mode for security
+  execute: (args: Record<string, unknown>, context: ToolContext) => Promise<Res>;
+}
+```
+
+### ToolConfig
+
+Configuration object used when creating tools with `createTool`.
+
+```typescript
+interface ToolConfig<Res extends ToolResult = ToolResult> {
+  id: string;                        // Unique tool identifier
+  name: string;                      // Human-readable tool name
+  description: string;               // Tool description for the LLM
+  requiresPermission?: boolean;      // Whether tool requires user permission
+  parameters?: Record<string, ParameterSchema>;  // Tool parameter definitions
+  requiredParameters?: string[];     // List of required parameter names
+  category?: ToolCategory | ToolCategory[];      // Tool categorization
+  alwaysRequirePermission?: boolean; // Override fast-edit mode for security
+  execute: (args: Record<string, unknown>, context: ToolContext) => Promise<Res>;
+  validateArgs?: (args: Record<string, unknown>) => ValidationResult;
+}
+```
+
+### ToolContext
+
+Context object passed to tool execution functions.
+
+```typescript
+interface ToolContext {
+  executionId: string;               // Unique execution identifier
+  permissionManager?: PermissionManager;  // Permission management
+  logger?: Logger;                   // Logging interface
+  executionAdapter: ExecutionAdapter;     // Environment execution adapter
+  toolRegistry?: {                   // Access to other tools
+    getAllTools: () => Tool[];
+    getTool: (toolId: string) => Tool | undefined;
+  };
+  sessionState: SessionState;        // Current session state
+  abortSignal?: AbortSignal;        // Cooperative cancellation signal
+  [key: string]: unknown;           // Additional context properties
+}
+```
+
+### ToolCategory
+
+Enumeration of tool categories for organization and permission management.
+
+```typescript
+enum ToolCategory {
+  FILE_OPERATION = 'file_operation',    // File system operations
+  SHELL_EXECUTION = 'shell_execution',  // Shell command execution
+  READONLY = 'readonly',                // Read-only operations
+  NETWORK = 'network',                  // Network operations
+}
+```
+
+### ParameterSchema
+
+Schema definition for tool parameters.
+
+```typescript
+interface ParameterSchema {
+  type: string;                      // Parameter type (string, number, boolean, etc.)
+  description?: string;              // Parameter description
+  items?: ParameterSchema;          // For array types, schema of array items
+  properties?: Record<string, ParameterSchema>;  // For object types
+  required?: string[];               // Required properties for object types
+  [key: string]: unknown;           // Additional schema properties
+}
+```
+
+### ValidationResult
+
+Result of parameter validation.
+
+```typescript
+interface ValidationResult {
+  valid: boolean;                    // Whether validation passed
+  reason?: string;                   // Reason for validation failure
+}
+```
+
+## Tool Result Types
+
+### ToolResult
+
+Base discriminated union for all tool results.
+
+```typescript
+interface ToolSuccess<Data = unknown> {
+  ok: true;
+  data: Data;
+}
+
+interface ToolError {
+  ok: false;
+  error: string;
+}
+
+type ToolResult<Data = unknown> = ToolSuccess<Data> | ToolError;
+```
+
+### Built-in Tool Result Types
+
+<CodeGroup>
+```typescript File Operations
+interface FileEditToolData {
+  path: string;
+  displayPath?: string;
+  originalContent: string;
+  newContent: string;
+}
+
+interface FileReadToolData {
+  content: string;
+  path: string;
+  lineCount?: number;
+}
+
+type FileEditToolResult = ToolResult<FileEditToolData>;
+type FileReadToolResult = ToolResult<FileReadToolData>;
+```
+
+```typescript Directory Operations
+interface LSToolData {
+  entries: Array<{
+    name: string;
+    isDirectory: boolean;
+    size?: number;
+    modified?: string;
+  }>;
+  path: string;
+}
+
+type LSToolResult = ToolResult<LSToolData>;
+```
+
+```typescript Shell Operations
+interface BashToolData {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  command: string;
+}
+
+type BashToolResult = ToolResult<BashToolData>;
+```
+
+```typescript Search Operations
+interface GrepToolData {
+  pattern: string;
+  path: string;
+  results: Array<{
+    file: string;
+    line: number;
+    content: string;
+  }>;
+  count: number;
+  hasMore: boolean;
+  truncated: boolean;
+  totalMatches: number;
+}
+
+interface GlobToolData {
+  pattern: string;
+  matches: string[];
+  count: number;
+  hasMore: boolean;
+  truncated: boolean;
+  totalMatches: number;
+}
+
+type GrepToolResult = ToolResult<GrepToolData>;
+type GlobToolResult = ToolResult<GlobToolData>;
+```
+</CodeGroup>
+
+## Built-in Tool Argument Types
+
+<CodeGroup>
+```typescript File Tool Arguments
+interface FileReadToolArgs {
+  path: string;
+  lineOffset?: number;
+  lineCount?: number;
+  maxSize?: number;
+  numberLines?: boolean;
+  encoding?: string;
+}
+
+interface FileEditToolArgs {
+  path: string;
+  searchCode: string;
+  replaceCode: string;
+  encoding?: string;
+}
+
+interface FileWriteToolArgs {
+  path: string;
+  content: string;
+  overwrite?: boolean;
+  createDir?: boolean;
+  encoding?: string;
+}
+```
+
+```typescript Search Tool Arguments
+interface GlobToolArgs {
+  pattern: string;
+  cwd?: string;
+  dot?: boolean;
+  nodir?: boolean;
+  maxResults?: number;
+}
+
+interface GrepToolArgs {
+  pattern: string;
+  path?: string;
+  filePattern?: string;
+  ignoreCase?: boolean;
+  recursive?: boolean;
+  maxResults?: number;
+}
+
+interface LSToolArgs {
+  path?: string;
+  showHidden?: boolean;
+  details?: boolean;
+  limit?: number;
+}
+```
+
+```typescript Execution Tool Arguments
+interface BashToolArgs {
+  command: string;
+  workingDir?: string;
+}
+
+interface BatchToolArgs {
+  description: string;
+  invocations: Array<{
+    tool_name: string;
+    input: object;
+  }>;
+}
+```
+</CodeGroup>
+
+## Context and Session Types
+
+### Message
+
+Base message type for conversation context.
+
+```typescript
+type Message = {
+  role: 'user' | 'assistant';
+  content: string | ContentBlock[];
+}
+
+type ContentBlock = 
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
+  | { type: 'tool_result'; tool_use_id: string; content: string }
+```
+
+### ConversationMessage
+
+Extended message with metadata for internal tracking.
+
+```typescript
+interface ConversationMessage {
+  id: string;                    // Unique message identifier
+  anthropic: Message;            // The actual message content
+  createdAt: number;            // Timestamp when message was created
+  lastCheckpointId?: string;    // Associated checkpoint for rollback
+}
+```
+
+### FileEntry
+
+File system entry information from LSTool.
+
+```typescript
+interface FileEntry {
+  name: string;                  // File or directory name
+  isDirectory: boolean;          // Whether this is a directory
+  isFile: boolean;              // Whether this is a file
+  isSymbolicLink: boolean;      // Whether this is a symbolic link
+  size?: number;                // File size in bytes
+  modified?: string;            // Last modified timestamp
+  created?: string;             // Creation timestamp
+  permissions?: string;         // File permissions
+}
+```
+
+## Registry Types
+
+### ToolRegistry
+
+Interface for managing tool registration and retrieval.
+
+```typescript
+interface ToolRegistry {
+  register(tool: Tool): void;
+  unregister(toolId: string): boolean;
+  getTool(toolId: string): Tool | undefined;
+  getAllTools(): Tool[];
+  getToolsByCategory(category: ToolCategory): Tool[];
+  clear(): void;
+}
+
+interface ToolDescription {
+  id: string;
+  name: string;
+  description: string;
+  parameters: Record<string, ParameterSchema>;
+  requiredParameters: string[];
+  category?: ToolCategory | ToolCategory[];
+}
+```
+
+## Execution Types
+
+### ExecutionAdapter
+
+Interface for environment-specific execution operations.
+
+```typescript
+interface ExecutionAdapter {
+  executeCommand: (
+    executionId: string,
+    command: string,
+    workingDir?: string,
+    checkpoint?: boolean,
+    timeoutMs?: number,
+    maxBuffer?: number,
+  ) => Promise<{
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+  }>;
+
+  editFile: (
+    executionId: string,
+    filepath: string,
+    searchCode: string,
+    replaceCode: string,
+    encoding?: string,
+  ) => Promise<FileEditToolResult>;
+
+  readFile: (
+    executionId: string,
+    filepath: string,
+    maxSize?: number,
+    lineOffset?: number,
+    lineCount?: number,
+    encoding?: string,
+    numberLines?: boolean,
+  ) => Promise<FileReadToolResult>;
+
+  writeFile: (
+    executionId: string,
+    filepath: string,
+    content: string,
+    encoding?: string,
+  ) => Promise<void>;
+
+  ls: (
+    executionId: string,
+    dirPath: string,
+    showHidden?: boolean,
+    details?: boolean,
+  ) => Promise<LSToolResult>;
+
+  glob: (
+    executionId: string, 
+    pattern: string, 
+    options?: any
+  ) => Promise<string[]>;
+
+  generateDirectoryMap: (
+    rootPath: string, 
+    maxDepth?: number
+  ) => Promise<string>;
+
+  getGitRepositoryInfo: () => Promise<GitRepositoryInfo[]>;
+  getDirectoryStructures: () => Promise<Map<string, string>>;
+}
+```
+
+## Utility Types
+
+### LastToolError
+
+Type for tracking the most recent tool error in session state.
+
+```typescript
+interface LastToolError {
+  toolId: string;                    // ID of the tool that failed
+  error: string;                     // Error message
+  args: Record<string, unknown>;     // Arguments that caused the error
+}
+```
+
+### GitRepositoryInfo
+
+Information about git repositories in the execution environment.
+
+```typescript
+interface GitRepositoryInfo {
+  rootPath: string;                  // Repository root directory
+  currentBranch: string;             // Current git branch
+  commitSha: string;                 // Current commit SHA
+  isDirty: boolean;                  // Whether there are uncommitted changes
+  remoteUrl?: string;               // Remote repository URL
+}
+```
+
+## Type Guards and Utilities
+
+### Result Type Guards
+
+```typescript
+// Check if a tool result is successful
+function isToolSuccess<T>(result: ToolResult<T>): result is ToolSuccess<T> {
+  return result.ok === true;
+}
+
+// Check if a tool result is an error
+function isToolError<T>(result: ToolResult<T>): result is ToolError {
+  return result.ok === false;
+}
+
+// Usage example
+const result = await tool.execute(args, context);
+if (isToolSuccess(result)) {
+  console.log('Tool succeeded:', result.data);
+} else {
+  console.error('Tool failed:', result.error);
+}
+```
+
+### Category Type Guards
+
+```typescript
+// Check if a tool belongs to a specific category
+function hasCategory(tool: Tool, category: ToolCategory): boolean {
+  if (!tool.category) return false;
+  
+  if (Array.isArray(tool.category)) {
+    return tool.category.includes(category);
+  }
+  
+  return tool.category === category;
+}
+
+// Usage example
+const fileTools = registry.getAllTools().filter(tool => 
+  hasCategory(tool, ToolCategory.FILE_OPERATION)
+);
+```
+
+## Best Practices
+
+### Type-Safe Tool Creation
+
+```typescript
+import { createTool, ToolResult, ToolCategory } from '@qckfx/agent';
+
+interface MyToolData {
+  message: string;
+  timestamp: number;
+}
+
+type MyToolResult = ToolResult<MyToolData>;
+
+const myTool = createTool<MyToolResult>({
+  id: 'my-tool',
+  name: 'MyTool',
+  description: 'A custom tool example',
+  category: ToolCategory.READONLY,
+  parameters: {
+    input: {
+      type: 'string',
+      description: 'Input message'
+    }
+  },
+  requiredParameters: ['input'],
+  
+  async execute(args, context): Promise<MyToolResult> {
+    try {
+      const input = args.input as string;
+      
+      return {
+        ok: true,
+        data: {
+          message: `Processed: ${input}`,
+          timestamp: Date.now()
+        }
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error.message
+      };
+    }
+  }
+});
+```
+
+### Working with Tool Results
+
+```typescript
+async function handleToolResult<T>(result: ToolResult<T>): Promise<T | null> {
+  if (isToolSuccess(result)) {
+    console.log('Tool execution successful');
+    return result.data;
+  } else {
+    console.error('Tool execution failed:', result.error);
+    // Handle error appropriately
+    throw new Error(`Tool failed: ${result.error}`);
+  }
+}
+
+// Usage
+try {
+  const data = await handleToolResult(toolResult);
+  // Work with successful data
+} catch (error) {
+  // Handle tool failure
+}
+```
+
+<Tip>
+Use TypeScript's discriminated unions and type guards to safely work with tool results and avoid runtime errors.
+</Tip>
+
+<Warning>
+Always validate tool arguments and handle both success and error cases when working with tool results.
+</Warning>
