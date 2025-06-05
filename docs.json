@@ -42,6 +42,7 @@
               "cli/validation",
               "cli/sessions",
               "cli/sub-agents",
+              "cli/advanced-patterns",
               "cli/litellm-setup"
             ]
           },
@@ -79,7 +80,7 @@
         },
         {
           "anchor": "Reference",
-          "href": "/sdk/api-reference",
+          "href": "https://docs.qckfx.com/sdk/api-reference",
           "icon": "code"
         }
       ]
