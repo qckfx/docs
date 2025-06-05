@@ -17,7 +17,9 @@
             "group": "Get Started",
             "pages": [
               "get-started/index",
-              "get-started/installation",
+              "get-started/choosing",
+              "get-started/cli-quickstart",
+              "get-started/sdk-quickstart",
               "get-started/configuration",
               "get-started/troubleshooting"
             ]

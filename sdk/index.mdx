@@ -17,10 +17,10 @@ const agent = new Agent({
 	systemPrompt: 'You are a helpful AI coding agent with access to a set of tools to accomplish the tasks given to you by the user.'
 });
 
-const { response,  } = await agent.processQuery('What does this repository do?');
+const { response } = await agent.processQuery('What does this repository do?');
 console.log('Agent response: ', response);
 
-const { response: nextResponse } = await agent.processQuery('What are the key files in this repository?', sessionState);
+const { response: nextResponse } = await agent.processQuery('What are the key files in this repository?');
 console.log('Agent response: ', nextResponse);
 ```
 

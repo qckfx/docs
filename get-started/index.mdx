@@ -1,107 +1,135 @@
 ---
-title: "What is qckfx?"
-description: "qckfx is an open-source agentic coding tool."
+title: "Choose Your qckfx Experience"
+description: "qckfx offers two distinct ways to harness AI-powered coding assistance for different use cases."
 ---
 
-qckfx (pronounced "quick fix") is an open-source alternative to tools like Claude Code and Codex CLI. It understands your codebase and helps you code faster through natural language commands, with the flexibility to use any LLM provider and full control over system prompts and tool configurations.
+qckfx (pronounced "quick fix") is an open-source AI coding platform that offers two distinct products for different use cases:
+
+## 🚀 qckfx CLI - Headless AI Coding Assistant
+
+**Perfect for terminal-based workflows and automation**
+
+The qckfx CLI is designed for developers who want a powerful AI coding assistant that can run headlessly in terminals, CI/CD pipelines, or GitHub Actions. It's optimized for automation and can operate with minimal human oversight.
 
 ```bash
 npm install -g @qckfx/agent
+qckfx "fix the type errors in the auth module"
 ```
 
-qckfx's key capabilities include:
+**Key capabilities:**
+- Natural language commands from terminal
+- Headless operation for CI/CD and automation
+- Custom agent configurations via JSON files
+- Git operations, file editing, and code analysis
+- Can run locally (with appropriate caution) or in sandboxed environments
 
-- Editing files and fixing bugs across your codebase
-- Answering questions about your code's architecture and logic
-- Executing and fixing tests, linting, and other commands
-- Searching through git history, resolving merge conflicts, and creating commits and PRs
-- Works with any LLM provider that offers an OpenAI compatible API (OpenAI, Anthropic, Google Gemini, Together AI, Groq, OpenRouter, LiteLLM, etc.)
+**⚠️ Security Note:** While the CLI can run in your local terminal, it's designed for headless automation. When running locally, use appropriate caution as it can make real changes to your codebase.
 
-## Why qckfx?
+<Card title="Get Started with CLI" icon="terminal" href="/get-started/cli-quickstart">
+  Install the CLI and run your first AI coding task
+</Card>
 
-qckfx works as a CLI Unix utility, operating directly in your terminal to understand your project context and take real actions. Unlike many other AI coding tools, qckfx learns about your codebase dynamically through agentic exploration - navigating directories, examining git history, and exploring code like a human developer would, with no upfront indexing required.
+## 🛠️ qckfx SDK - Embedded AI Agent Platform
 
-**Key differentiators:**
+**Perfect for building applications with integrated AI coding capabilities**
+
+The qckfx SDK is a TypeScript/JavaScript library for developers who want to embed AI coding agents directly into their applications, providing full programmatic control over agent behavior.
+
+```typescript
+import { Agent } from '@qckfx/agent';
+
+const agent = new Agent({
+  defaultModel: 'anthropic/claude-sonnet-4',
+  systemPrompt: 'You are a helpful AI coding agent...'
+});
+
+const result = await agent.processQuery('What does this repository do?');
+```
+
+**Key capabilities:**
+- Full programmatic control over agent lifecycle
+- Streaming updates and event handling
+- User permission systems and checkpoints
+- Custom tool configurations
+- Integration into web apps, desktop apps, or services
+
+<Card title="Get Started with SDK" icon="code" href="/get-started/sdk-quickstart">
+  Embed AI coding agents into your applications
+</Card>
+
+## Which Should You Choose?
+
+<CardGroup cols={2}>
+  <Card title="Use CLI if you want to:" icon="terminal">
+    - Automate coding tasks in CI/CD pipelines
+    - Run AI assistance in GitHub Actions
+    - Get quick help from terminal while coding
+    - Build headless automation workflows
+    - Use pre-built agent configurations
+  </Card>
+  <Card title="Use SDK if you want to:" icon="code">
+    - Build custom applications with AI agents
+    - Create user-facing coding assistants
+    - Integrate agents into existing software
+    - Have full control over agent behavior
+    - Build commercial products with embedded AI
+  </Card>
+</CardGroup>
+
+## Shared Foundation
+
+Both products share the same core capabilities:
 
 - **Open source**: Full transparency and community-driven development
 - **Provider flexibility**: Support for any LLM provider with OpenAI-compatible APIs
-- **Customizable agents**: Complete control over system prompts, tool configurations, and model selection
-- **No performance overhead**: Works with projects of all sizes without indexing delays
-
-## Security & Privacy
-
-qckfx ensures:
-
-- **Direct API connection**: Your queries go directly to the URL you specify for the LLM provider
-- **Full environment control**: Easy to run locally or remotely in a Docker container or inside custom sandboxing solutions
-- **Dynamic understanding**: Maintains awareness of your entire project structure without using external databases or indexing software
-- **Takes action**: Performs real operations like editing files and creating commits
-
-## Getting Started
-
-**System Requirements:** Node.js 18\+
-
-qckfx works out of the box after installation. You'll just need to provide an LLM API key and base URL for your chosen provider. Follow our installation guide for detailed setup steps.
-
-**Current Status:** qckfx is in beta. The CLI provides a streamlined experience without mid-conversation steering options. For advanced use cases requiring runtime permission control, user interrupts, checkpointing, or rollbacks, we recommend using the SDK which provides extensive hooks into the agent system.
+- **Dynamic codebase understanding**: No upfront indexing required
+- **Comprehensive toolset**: File operations, bash commands, git integration, and more
+- **Security focused**: Direct API connections and configurable execution environments
 
 ## Quick Tour
 
 Here's what you can do with qckfx:
 
-### From questions to solutions in seconds
-
+### CLI Examples
 ```bash
 # Ask questions about your codebase
-qckfx
-> how does our authentication system work?
+qckfx "how does our authentication system work?"
 
 # Fix issues across multiple files
 qckfx "fix the type errors in the auth module"
+
+# Automate Git operations
+qckfx "commit my changes and create a PR"
 ```
 
-### **Understand unfamiliar code**
+### SDK Examples
+```typescript
+// Process queries programmatically
+const result = await agent.processQuery('What does this repository do?');
 
+// Handle streaming updates
+agent.on('toolCall', (tool) => console.log(`Using ${tool.name}`));
+
+// Control permissions
+const agent = new Agent(config, {
+  onPermissionRequest: async (request) => await askUser(request)
+});
 ```
-> what does the payment processing system do?
-> find where user permissions are checked
-> explain how the caching layer works
-```
-
-### **Automate Git operations**
-
-```
-> commit my changes
-> create a pr
-> which commit added tests for markdown back in December?
-> rebase on main and resolve any merge conflicts
-```
-
-## Next Steps
-
-<CardGroup cols={2}>
-  <Card title="Installation" icon="rocket" href="/get-started/installation">
-    Install qckfx and get up and running
-  </Card>
-  <Card title="Github Actions" icon="robot" href="/applications/github-actions">
-    Setup qckfx in github actions for automated AI assistance
-  </Card>
-  <Card title="SDK" icon="code" href="/sdk/index">
-    Learn about how to embed qckfx into any javascript/typescript application
-  </Card>
-  <Card title="Configuration" icon="gear" href="/get-started/configuration">
-    Customize qckfx for your workflow
-  </Card>
-</CardGroup>
 
 ## Additional Resources
 
 <CardGroup cols={2}>
-  <Card title="qckfx Tutorials" icon="graduation-cap" href="get-started/tutorials">
-    Step-by-step guides for common tasks
+  <Card title="GitHub Actions" icon="robot" href="/applications/github-actions">
+    Setup qckfx in GitHub Actions for automated AI assistance
+  </Card>
+  <Card title="Configuration" icon="gear" href="/get-started/configuration">
+    Customize agents for your specific workflow needs
   </Card>
   <Card title="Troubleshooting" icon="wrench" href="/get-started/troubleshooting">
     Solutions for common issues with qckfx
+  </Card>
+  <Card title="Concepts" icon="book" href="/concepts/core-concepts">
+    Understand the core concepts behind qckfx agents
   </Card>
 </CardGroup>
 
@@ -109,10 +137,10 @@ qckfx "fix the type errors in the auth module"
 
 qckfx is provided under the MIT license.
 
-### **Feedback transcripts**
+### Feedback transcripts
 
 If you choose to send us feedback about qckfx, such as transcripts of your usage, we may use that feedback to debug related issues and improve qckfx's functionality (e.g., to reduce the risk of similar bugs occurring in the future). We will not train generative models using this feedback.
 
-### **License**
+### License
 
 © qckfx, Inc 2025. All rights reserved. Open source under the MIT License - free to use, modify, and distribute.
