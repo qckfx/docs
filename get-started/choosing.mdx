@@ -1,0 +1,262 @@
+---
+title: "CLI vs SDK: Which to Choose?"
+description: "A detailed comparison to help you choose between the qckfx CLI and SDK for your use case"
+icon: "scale-balanced"
+---
+
+qckfx offers two distinct products designed for different use cases. This guide will help you choose the right one for your needs.
+
+## Quick Decision Matrix
+
+<CardGroup cols={2}>
+  <Card title="Choose CLI if you:" icon="terminal">
+    ✅ Want to automate coding tasks in CI/CD  
+    ✅ Need AI assistance while coding in terminal  
+    ✅ Want to run headless automation workflows  
+    ✅ Prefer simple command-line interfaces  
+    ✅ Need GitHub Actions integration  
+    ✅ Want minimal setup and configuration  
+  </Card>
+  <Card title="Choose SDK if you:" icon="code">
+    ✅ Are building applications with AI features  
+    ✅ Need programmatic control over agents  
+    ✅ Want to create custom user interfaces  
+    ✅ Need streaming updates and event handling  
+    ✅ Require fine-grained permission control  
+    ✅ Are building commercial products  
+  </Card>
+</CardGroup>
+
+## Detailed Comparison
+
+### Use Case Scenarios
+
+<Tabs>
+  <Tab title="Individual Developer">
+    **Best Choice: CLI**
+    
+    As a solo developer, you want quick AI assistance while coding:
+    
+    ```bash
+    # Quick help while coding
+    qckfx "explain this error message"
+    qckfx "fix the failing tests"
+    qckfx "refactor this function to be more readable"
+    ```
+    
+    **Why CLI wins:**
+    - Instant access from any terminal
+    - No application development needed
+    - Works in any codebase immediately
+    - Perfect for ad-hoc tasks
+  </Tab>
+  
+  <Tab title="Team Automation">
+    **Best Choice: CLI**
+    
+    Your team wants automated AI assistance in CI/CD pipelines:
+    
+    ```yaml
+    # GitHub Actions workflow
+    - name: AI Code Review
+      run: qckfx "review the changes in this PR and suggest improvements"
+    ```
+    
+    **Why CLI wins:**
+    - Designed for headless operation
+    - Easy CI/CD integration
+    - No custom development required
+    - Consistent across different environments
+  </Tab>
+  
+  <Tab title="Application Developer">
+    **Best Choice: SDK**
+    
+    You're building an IDE extension, web app, or service with AI features:
+    
+    ```typescript
+    // Custom code review app
+    const agent = new Agent(config);
+    const review = await agent.processQuery('Review this code for security issues');
+    
+    // Display results in your UI
+    displayCodeReview(review.response);
+    ```
+    
+    **Why SDK wins:**
+    - Full programmatic control
+    - Custom UI integration
+    - Event handling for responsive UIs
+    - Session management for conversations
+  </Tab>
+  
+  <Tab title="Enterprise Integration">
+    **Best Choice: SDK**
+    
+    You need to embed AI coding capabilities into existing enterprise software:
+    
+    ```typescript
+    // Enterprise code analysis service
+    const agent = new Agent({
+      environment: { type: 'remote' }, // Secure sandboxing
+      onPermissionRequest: async (req) => await checkComplianceRules(req)
+    });
+    ```
+    
+    **Why SDK wins:**
+    - Enterprise-grade security controls
+    - Custom permission systems
+    - Integration with existing auth/audit systems
+    - Scalable remote execution
+  </Tab>
+</Tabs>
+
+### Technical Capabilities
+
+| Feature | CLI | SDK | Notes |
+|---------|-----|-----|-------|
+| **Installation** | Global npm install | Project dependency | CLI is system-wide, SDK is per-project |
+| **Usage** | Command line | Programmatic API | CLI for terminal, SDK for applications |
+| **Configuration** | JSON files + CLI flags | Code + JSON files | SDK offers more runtime flexibility |
+| **Execution** | Headless by design | Local/Docker/Remote | SDK offers more environment options |
+| **Streaming** | ❌ | ✅ | SDK provides real-time updates |
+| **Session Management** | ❌ | ✅ | SDK maintains conversation context |
+| **Permission Control** | Basic | Advanced | SDK allows custom permission logic |
+| **Error Handling** | Basic | Advanced | SDK provides detailed error events |
+| **UI Integration** | ❌ | ✅ | SDK designed for custom interfaces |
+
+### Security Considerations
+
+<Warning>
+**CLI Security Note**: The CLI is designed for headless automation but can run locally. When running in your local terminal, it can make real changes to your codebase. Use appropriate caution and always work in version-controlled repositories.
+</Warning>
+
+<Info>
+**SDK Security Note**: The SDK provides multiple execution environments (local, Docker, remote) and fine-grained permission controls, making it suitable for both development and production use cases.
+</Info>
+
+### Performance & Scalability
+
+**CLI Performance:**
+- Optimized for single-task execution
+- Minimal overhead for automation scripts
+- Best for batch processing and CI/CD
+
+**SDK Performance:**
+- Designed for long-running applications
+- Session state management for efficiency
+- Caching and connection pooling
+- Better for interactive applications
+
+### Learning Curve
+
+<CardGroup cols={2}>
+  <Card title="CLI Learning Curve" icon="chart-line">
+    **Beginner Friendly**
+    
+    - Install and run immediately
+    - Familiar command-line interface
+    - No programming required
+    - Great for getting started
+    
+    **Time to productivity: Minutes**
+  </Card>
+  <Card title="SDK Learning Curve" icon="chart-line">
+    **Developer Focused**
+    
+    - Requires TypeScript/JavaScript knowledge
+    - Understanding of async programming
+    - Application architecture decisions
+    - More configuration options
+    
+    **Time to productivity: Hours to days**
+  </Card>
+</CardGroup>
+
+## Migration Paths
+
+### From CLI to SDK
+
+If you start with the CLI and later need SDK features:
+
+```typescript
+// Your CLI command
+// qckfx "analyze this codebase"
+
+// Equivalent SDK code
+const agent = new Agent({
+  defaultModel: 'anthropic/claude-sonnet-4',
+  systemPrompt: 'You are a helpful AI coding agent...'
+});
+
+const result = await agent.processQuery('analyze this codebase');
+```
+
+### From SDK to CLI
+
+If you have SDK code and want to automate it:
+
+```json
+// Create agent-config.json from your SDK config
+{
+  "defaultModel": "anthropic/claude-sonnet-4",
+  "systemPrompt": "You are a helpful AI coding agent...",
+  "tools": ["bash", "file_read", "file_edit", "grep"]
+}
+```
+
+```bash
+# Run with CLI
+qckfx -a agent-config.json "analyze this codebase"
+```
+
+## Common Misconceptions
+
+<Accordion title="&quot;I need the SDK for advanced features&quot;">
+**Not necessarily.** The CLI supports custom agent configurations, sub-agents, and all the same tools as the SDK. The main difference is the interface (command-line vs programmatic API).
+</Accordion>
+
+<Accordion title="&quot;The CLI is just a wrapper around the SDK&quot;">
+**Partially true.** While they share the same core engine, the CLI is optimized for headless operation and automation, while the SDK is optimized for application integration.
+</Accordion>
+
+<Accordion title="&quot;I can't use both&quot;">
+**False.** You can use both in the same project. For example, use the CLI for CI/CD automation and the SDK for a custom developer dashboard.
+</Accordion>
+
+## Decision Framework
+
+Ask yourself these questions:
+
+1. **Are you building an application?**
+   - Yes → SDK
+   - No → CLI
+
+2. **Do you need a custom user interface?**
+   - Yes → SDK
+   - No → CLI
+
+3. **Is this for automation/CI/CD?**
+   - Yes → CLI
+   - No → Consider both
+
+4. **Do you need real-time streaming updates?**
+   - Yes → SDK
+   - No → Either works
+
+5. **Do you need session management?**
+   - Yes → SDK
+   - No → Either works
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Start with CLI" icon="terminal" href="/get-started/cli-quickstart">
+    Get up and running in minutes with the command-line interface
+  </Card>
+  <Card title="Start with SDK" icon="code" href="/get-started/sdk-quickstart">
+    Begin building applications with embedded AI agents
+  </Card>
+</CardGroup>
+
+Still not sure? Start with the CLI - it's easier to get going and you can always add the SDK later if you need programmatic control.

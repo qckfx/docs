@@ -1,0 +1,428 @@
+---
+title: "SDK Quickstart"
+description: "Embed AI coding agents into your applications with the qckfx SDK"
+icon: "code"
+---
+
+The qckfx SDK is a TypeScript/JavaScript library that lets you embed powerful AI coding agents directly into your applications. This guide will get you building with AI agents in minutes.
+
+## Installation
+
+Install the SDK as a dependency in your project:
+
+<CodeGroup>
+
+```bash npm
+npm install @qckfx/agent
+```
+
+```bash yarn
+yarn add @qckfx/agent
+```
+
+```bash pnpm
+pnpm add @qckfx/agent
+```
+
+</CodeGroup>
+
+## Quick Start
+
+### 1. Basic Agent Setup
+
+Create your first agent with minimal configuration:
+
+```typescript
+import { Agent } from '@qckfx/agent';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+// Create a basic agent
+const agent = new Agent({
+  defaultModel: 'anthropic/claude-sonnet-4',
+  systemPrompt: 'You are a helpful AI coding agent with access to tools for analyzing and modifying code.',
+  environment: {
+    type: 'local' // Run in the same process
+  }
+});
+
+// Process a query
+const result = await agent.processQuery('What does this repository do?');
+console.log('Agent response:', result.response);
+```
+
+### 2. Environment Variables
+
+Set up your LLM provider credentials:
+
+<CodeGroup>
+
+```bash Anthropic (Claude)
+LLM_API_KEY=sk-ant-your-secret-key
+LLM_BASE_URL=https://api.anthropic.com/v1/
+```
+
+```bash OpenAI
+LLM_API_KEY=sk-your-openai-key
+LLM_BASE_URL=https://api.openai.com/v1/
+```
+
+```bash OpenRouter
+LLM_API_KEY=sk-or-your-openrouter-key
+LLM_BASE_URL=https://openrouter.ai/api/v1/
+```
+
+</CodeGroup>
+
+### 3. Your First Real Integration
+
+Here's a more complete example showing key SDK features:
+
+```typescript
+import { Agent } from '@qckfx/agent';
+
+const agent = new Agent(
+  {
+    defaultModel: 'anthropic/claude-sonnet-4',
+    systemPrompt: 'You are a code review assistant. Focus on finding bugs, security issues, and suggesting improvements.',
+    environment: {
+      type: 'local'
+    },
+    logLevel: 'info'
+  },
+  {
+    // Handle tool execution events
+    onToolExecutionStarted: (execution) => {
+      console.log(`🔧 Starting tool: ${execution.toolName} (${execution.toolId})`);
+    },
+    
+    onToolExecutionCompleted: (execution) => {
+      console.log(`✅ Tool completed: ${execution.toolName} in ${execution.executionTime}ms`);
+    },
+    
+    // Handle processing lifecycle
+    onProcessingCompleted: (data) => {
+      console.log('✅ Processing completed');
+      console.log('Response:', data.response);
+    },
+    
+    // Handle errors
+    onProcessingError: (data) => {
+      console.error('❌ Processing error:', data.error.message);
+    },
+    
+    onToolExecutionError: (execution) => {
+      console.error('❌ Tool error:', execution.error?.message);
+    }
+  }
+);
+
+// Process multiple queries in sequence
+async function analyzeCode() {
+  try {
+    // First query
+    const overview = await agent.processQuery(
+      'Give me an overview of this codebase structure'
+    );
+    
+    // Second query (maintains context)
+    const issues = await agent.processQuery(
+      'Now analyze the code for potential security issues'
+    );
+    
+    return {
+      overview: overview.response,
+      securityAnalysis: issues.response
+    };
+  } catch (error) {
+    console.error('Analysis failed:', error);
+  }
+}
+
+analyzeCode();
+```
+
+## Core Concepts
+
+### Agent Configuration
+
+The Agent constructor takes a configuration object with these key properties:
+
+```typescript
+interface AgentConfig {
+  defaultModel: string;           // Model to use (e.g., 'anthropic/claude-sonnet-4')
+  systemPrompt: string;           // Instructions for the agent
+  environment: {                  // Where tools execute
+    type: 'local' | 'docker' | 'remote';
+  };
+  logLevel?: 'debug' | 'info' | 'warn' | 'error';
+  cachingEnabled?: boolean;       // Tool execution caching (default: true)
+}
+```
+
+### Execution Environments
+
+Choose where your agent's tools will execute:
+
+<CardGroup cols={3}>
+  <Card title="Local" icon="desktop">
+    **Best for**: Development and trusted environments
+    
+    Executes tools in the same process as your application.
+    
+    ```typescript
+    environment: { type: 'local' }
+    ```
+  </Card>
+  <Card title="Docker" icon="docker">
+    **Best for**: Sandboxed execution
+    
+    Runs tools inside a Docker container for isolation.
+    
+    ```typescript
+    environment: { type: 'docker' }
+    ```
+  </Card>
+  <Card title="Remote" icon="cloud">
+    **Best for**: Production and scalability
+    
+    Executes tools in remote sandboxed environments.
+    
+    ```typescript
+    environment: { type: 'remote' }
+    ```
+  </Card>
+</CardGroup>
+
+### Event Handling
+
+The SDK provides rich event handling for building responsive UIs:
+
+```typescript
+const agent = new Agent(config, {
+  // Tool execution events
+  onToolExecutionStarted: (execution) => updateUI(`Using ${execution.toolName}`),
+  onToolExecutionCompleted: (execution) => showToolOutput(execution.result),
+  
+  // Processing events
+  onProcessingStarted: (data) => showSpinner(),
+  onProcessingCompleted: (data) => hideSpinner(),
+  
+  // Error handling
+  onProcessingError: (data) => showErrorMessage(data.error),
+  onToolExecutionError: (execution) => showErrorMessage(execution.error),
+  
+  // Permission requests (for interactive apps)
+  onPermissionRequested: async (permission) => {
+    return await askUserPermission(permission);
+  }
+});
+```
+
+## Common Integration Patterns
+
+### Web Application Integration
+
+```typescript
+// React component example
+import { useState, useEffect } from 'react';
+import { Agent } from '@qckfx/agent';
+
+function CodeAssistant() {
+  const [agent, setAgent] = useState<Agent | null>(null);
+  const [response, setResponse] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    const newAgent = new Agent(
+      {
+        defaultModel: 'anthropic/claude-sonnet-4',
+        systemPrompt: 'You are a helpful coding assistant.',
+        environment: { type: 'docker' } // Safer for web apps
+      },
+      {
+        onProcessingStarted: () => setIsProcessing(true),
+        onProcessingCompleted: (data) => {
+          setResponse(data.response);
+          setIsProcessing(false);
+        }
+      }
+    );
+    setAgent(newAgent);
+  }, []);
+
+  const handleQuery = async (query: string) => {
+    if (agent) {
+      await agent.processQuery(query);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={() => handleQuery('Analyze this code')}>
+        Analyze Code
+      </button>
+      {isProcessing && <div>Processing...</div>}
+      <div>{response}</div>
+    </div>
+  );
+}
+```
+
+### Node.js Service Integration
+
+```typescript
+// Express.js API endpoint
+import express from 'express';
+import { Agent } from '@qckfx/agent';
+
+const app = express();
+const agent = new Agent({
+  defaultModel: 'anthropic/claude-sonnet-4',
+  systemPrompt: 'You are an API that analyzes code and returns JSON responses.',
+  environment: { type: 'docker' }
+});
+
+app.post('/analyze', async (req, res) => {
+  try {
+    const { query } = req.body;
+    const result = await agent.processQuery(query);
+    
+    res.json({
+      success: true,
+      response: result.response,
+      sessionId: result.sessionId
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.listen(3000);
+```
+
+## Advanced Features
+
+### Custom Tool Configurations
+
+```typescript
+// Load agent configuration from JSON file
+import agentConfig from './agent-config.json';
+
+const agent = new Agent(agentConfig);
+```
+
+Example `agent-config.json`:
+```json
+{
+  "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+  "defaultModel": "anthropic/claude-sonnet-4",
+  "systemPrompt": "You are a specialized code review agent...",
+  "tools": [
+    "bash",
+    "file_read",
+    "file_edit",
+    "grep",
+    "think"
+  ],
+  "experimentalFeatures": {
+    "subAgents": true
+  }
+}
+```
+
+### Session Management
+
+```typescript
+// Continue conversations across multiple queries
+let sessionState = null;
+
+const result1 = await agent.processQuery('What files are in this project?');
+sessionState = result1.sessionState;
+
+const result2 = await agent.processQuery(
+  'Now analyze the main entry point file',
+  sessionState
+);
+```
+
+### Permission Control
+
+```typescript
+const agent = new Agent(config, {
+  onPermissionRequested: async (permission) => {
+    // Custom permission logic
+    if (permission.toolId === 'bash' && JSON.stringify(permission.args).includes('rm')) {
+      return false; // Deny dangerous commands
+    }
+    return true; // Allow other operations
+  }
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="SDK API Reference" icon="book" href="/sdk/api-reference">
+    Complete API documentation for all SDK methods and options
+  </Card>
+  <Card title="Agent Configuration" icon="gear" href="/sdk/configuration">
+    Learn about advanced agent configuration options
+  </Card>
+  <Card title="Built-in Tools" icon="wrench" href="/sdk/tools">
+    Explore all the tools available to your agents
+  </Card>
+  <Card title="Core Concepts" icon="lightbulb" href="/concepts/core-concepts">
+    Understand the architecture behind qckfx agents
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="TypeScript errors with Agent import">
+  Make sure you have the correct types installed:
+  ```bash
+  npm install --save-dev @types/node
+  ```
+  
+  And ensure your `tsconfig.json` includes:
+  ```json
+  {
+    "compilerOptions": {
+      "moduleResolution": "node",
+      "esModuleInterop": true
+    }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Environment variable not found">
+  The SDK looks for `LLM_API_KEY` and `LLM_BASE_URL` environment variables. Make sure they're set:
+  ```typescript
+  // Check if variables are loaded
+  console.log('API Key:', process.env.LLM_API_KEY ? 'Set' : 'Missing');
+  console.log('Base URL:', process.env.LLM_BASE_URL);
+  ```
+</Accordion>
+
+<Accordion title="Docker environment not working">
+  Ensure Docker is running and accessible:
+  ```bash
+  docker --version  # Should show Docker version
+  docker ps         # Should list running containers
+  ```
+</Accordion>
+
+## What's Next?
+
+Now that you have the SDK integrated, you can:
+
+- **Build custom UIs**: Create web or desktop applications with embedded agents
+- **Integrate with existing systems**: Add AI capabilities to your current applications  
+- **Scale your solution**: Use remote environments for production deployments
+- **Customize behavior**: Create specialized agents for specific use cases

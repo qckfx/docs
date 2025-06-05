@@ -1,0 +1,198 @@
+---
+title: "CLI Quickstart"
+description: "Get up and running with the qckfx CLI in under 5 minutes"
+icon: "terminal"
+---
+
+The qckfx CLI is a powerful headless AI coding assistant designed for terminal workflows, automation, and CI/CD pipelines. This guide will get you running your first AI coding task in minutes.
+
+## System Requirements
+
+<CardGroup cols={2}>
+  <Card title="Operating Systems" icon="desktop">
+    - macOS 10.15 (Catalina) or newer
+    - Ubuntu 20.04 / Debian 11 or newer  
+    - Windows 10/11 with WSL or Git-Bash
+  </Card>
+  <Card title="Software Requirements" icon="code">
+    - Node.js 18+ (required)
+    - git 2.23+ (optional - for repo features)
+    - 4 GB RAM minimum
+  </Card>
+</CardGroup>
+
+<Warning>
+  **Windows Users**: The CLI requires a Unix-like environment. Use WSL (recommended) or Git-Bash for the best experience.
+</Warning>
+
+## Quick Installation
+
+### 1. Install the CLI globally
+
+```bash
+npm install -g @qckfx/agent
+```
+
+<Warning>
+  Do NOT use `sudo npm install -g` as this can lead to permission issues and security risks.
+</Warning>
+
+### 2. Set up your LLM provider
+
+qckfx works with any OpenAI-compatible API. Set your environment variables:
+
+<CodeGroup>
+
+```bash Anthropic (Claude)
+export LLM_API_KEY="sk-ant-your-secret-key"
+export LLM_BASE_URL="https://api.anthropic.com/v1/"
+```
+
+```bash OpenAI
+export LLM_API_KEY="sk-your-openai-key"
+export LLM_BASE_URL="https://api.openai.com/v1/"
+```
+
+```bash OpenRouter
+export LLM_API_KEY="sk-or-your-openrouter-key"
+export LLM_BASE_URL="https://openrouter.ai/api/v1/"
+```
+
+```bash LiteLLM Proxy
+export LLM_API_KEY="your-proxy-key"
+export LLM_BASE_URL="http://localhost:8001/"
+```
+
+</CodeGroup>
+
+<Tip>
+  Add these to your shell profile (`.bashrc`, `.zshrc`, etc.) to persist them across sessions.
+</Tip>
+
+### 3. Run your first command
+
+```bash
+qckfx "Hello, world!"
+```
+
+If everything is set up correctly, qckfx will respond and you're ready to go!
+
+## Your First Real Task
+
+Let's try something more practical. Navigate to any code repository and run:
+
+```bash
+# Analyze your codebase
+qckfx "What does this repository do? Give me a high-level overview."
+
+# Fix common issues
+qckfx "Check for any obvious bugs or issues in the codebase"
+
+# Get help with specific files
+qckfx "Explain what the main entry point file does"
+```
+
+## Common CLI Patterns
+
+### Quick Model Selection
+
+```bash
+# Use a specific model for one command
+qckfx -m openai/gpt-4o "Refactor the auth.js file"
+
+# Use a different provider
+qckfx --url https://api.openai.com/v1 --api-key sk-... -m gpt-4o "Fix the tests"
+```
+
+### Automation-Friendly Commands
+
+```bash
+# Non-interactive mode (good for scripts)
+qckfx "commit my changes with a descriptive message"
+
+# Run with specific configuration
+qckfx -a ./my-agent-config.json "Review the latest changes"
+```
+
+### Git Integration
+
+```bash
+# Analyze recent changes
+qckfx "What changed in the last 3 commits?"
+
+# Help with merge conflicts
+qckfx "I have merge conflicts, help me resolve them"
+
+# Create commits and PRs
+qckfx "commit my changes and create a pull request"
+```
+
+## Safety and Security
+
+<Warning>
+  **Local Execution Warning**: The CLI can make real changes to your codebase when run locally. Always:
+  - Work in a git repository with committed changes
+  - Review changes before accepting them
+  - Consider using sandboxed environments for untrusted code
+</Warning>
+
+### Recommended Safety Practices
+
+1. **Use version control**: Always work in a git repository
+2. **Commit frequently**: Save your work before running qckfx
+3. **Review changes**: Check what qckfx modified before committing
+4. **Sandbox for automation**: Use Docker or remote environments for CI/CD
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Advanced Configuration" icon="gear" href="/get-started/configuration">
+    Learn how to create custom agent configurations with JSON files
+  </Card>
+  <Card title="GitHub Actions" icon="robot" href="/applications/github-actions">
+    Set up qckfx to run automatically in your CI/CD pipeline
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/get-started/troubleshooting">
+    Solutions for common CLI installation and usage issues
+  </Card>
+  <Card title="Core Concepts" icon="book" href="/concepts/core-concepts">
+    Understand how qckfx agents work under the hood
+  </Card>
+</CardGroup>
+
+## Troubleshooting Quick Fixes
+
+<Accordion title="Command not found: qckfx">
+  Make sure you installed globally and that your npm global bin directory is in your PATH:
+  ```bash
+  npm list -g @qckfx/agent  # Should show the package
+  npm config get prefix     # Check your global prefix
+  ```
+</Accordion>
+
+<Accordion title="Permission denied errors">
+  Don't use sudo with npm. Instead, configure npm to use a different directory:
+  ```bash
+  mkdir ~/.npm-global
+  npm config set prefix '~/.npm-global'
+  echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
+  source ~/.bashrc
+  ```
+</Accordion>
+
+<Accordion title="API key or connection errors">
+  Verify your environment variables are set correctly:
+  ```bash
+  echo $LLM_API_KEY    # Should show your key
+  echo $LLM_BASE_URL   # Should show your provider URL
+  ```
+</Accordion>
+
+## What's Next?
+
+Now that you have the CLI working, you can:
+
+- **Automate your workflow**: Use qckfx in scripts and CI/CD pipelines
+- **Customize behavior**: Create agent configuration files for specific tasks
+- **Integrate with tools**: Combine qckfx with your existing development tools
+- **Scale up**: Consider the SDK if you need programmatic control for applications
