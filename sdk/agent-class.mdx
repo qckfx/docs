@@ -1,0 +1,448 @@
+---
+title: "Agent Class"
+description: "Complete reference for the Agent class - the main entry point for the qckfx Agent SDK"
+icon: "robot"
+---
+
+The `Agent` class is the primary interface for creating and managing AI agents. It provides methods for processing queries, managing tools, handling events, and controlling agent behavior.
+
+## Constructor
+
+The Agent class uses a factory pattern. Use the static `create` method instead of calling the constructor directly.
+
+## Static Methods
+
+### Agent.create()
+
+Creates a new Agent instance with the provided configuration.
+
+```typescript
+static async create(options: {
+  config: AgentConfig;
+  callbacks?: AgentCallbacks;
+}): Promise<Agent>
+```
+
+**Parameters:**
+- `config` - Agent configuration object (see [Configuration](/sdk/configuration))
+- `callbacks` - Optional runtime callbacks for events and dynamic data
+
+**Returns:** Promise resolving to a new Agent instance
+
+**Throws:** `ConfigValidationError` if the config is invalid
+
+**Example:**
+```typescript
+import { Agent } from '@qckfx/agent';
+
+const agent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    environment: 'local',
+    systemPrompt: 'You are a helpful coding assistant.',
+    logLevel: 'info'
+  },
+  callbacks: {
+    onProcessingStarted: (data) => console.log('Processing started:', data),
+    onToolExecutionCompleted: (execution) => console.log('Tool completed:', execution)
+  }
+});
+```
+
+### Agent.createContextWindow()
+
+Creates a new context window for managing conversation history.
+
+```typescript
+static async createContextWindow(messages?: Message[]): Promise<ContextWindow>
+```
+
+**Parameters:**
+- `messages` - Optional array of initial messages
+
+**Returns:** Promise resolving to a new ContextWindow instance
+
+**Example:**
+```typescript
+const contextWindow = await Agent.createContextWindow([
+  { role: 'user', content: [{ type: 'text', text: 'Hello!' }] }
+]);
+```
+
+### Agent.performRollback()
+
+Performs a rollback operation on a session state without requiring an Agent instance.
+
+```typescript
+static async performRollback(
+  sessionState: SessionState, 
+  messageId: string
+): Promise<void>
+```
+
+**Parameters:**
+- `sessionState` - The session state to rollback
+- `messageId` - ID of the message to rollback to (rolls back to before this message was sent)
+
+### Agent.getAvailableModels()
+
+Retrieves available models from the LLM provider.
+
+```typescript
+static async getAvailableModels(
+  llmApiKey?: string, 
+  logger?: Logger
+): Promise<string[]>
+```
+
+**Parameters:**
+- `llmApiKey` - Optional API key (uses environment variable if not provided)
+- `logger` - Optional logger instance
+
+**Returns:** Promise resolving to array of available model names
+
+### Agent.getMultiRepoInfo()
+
+Gets multi-repository tracking information for a session.
+
+```typescript
+static getMultiRepoInfo(sessionState: SessionState): {
+  repoCount: number;
+  repoPaths: string[];
+  directoryStructureGenerated: boolean;
+  lastCheckpointMetadata?: {
+    toolExecutionId: string;
+    timestamp: string;
+    repoCount: number;
+    hostCommits: Record<string, string>;
+  };
+} | null
+```
+
+**Parameters:**
+- `sessionState` - The session state to extract multi-repo data from
+
+**Returns:** Multi-repo tracking data or null if not available
+
+### Agent.getRepositoryCount()
+
+Gets the number of repositories being tracked in a session.
+
+```typescript
+static getRepositoryCount(sessionState: SessionState): number
+```
+
+**Parameters:**
+- `sessionState` - The session state to check
+
+**Returns:** Number of repositories being tracked (0 if not available)
+
+### Agent.getRepositoryPaths()
+
+Gets the repository paths being tracked in a session.
+
+```typescript
+static getRepositoryPaths(sessionState: SessionState): string[]
+```
+
+**Parameters:**
+- `sessionState` - The session state to check
+
+**Returns:** Array of repository paths being tracked
+
+## Instance Methods
+
+### processQuery()
+
+Processes a natural language query with the agent.
+
+```typescript
+async processQuery(
+  query: string,
+  model?: string,
+  contextWindow?: ContextWindow
+): Promise<ProcessQueryResult>
+```
+
+**Parameters:**
+- `query` - The query string to process
+- `model` - Optional model to use (uses defaultModel from config if not provided) - this will override the model defined in the agent if set
+- `contextWindow` - Optional context window (continues session if omitted)
+
+**Returns:** Promise resolving to the query result
+
+**Throws:** Error if no model is provided and no defaultModel is set in config
+
+**Example:**
+```typescript
+// Basic query
+const result = await agent.processQuery('What files are in this directory?');
+console.log(result.response);
+
+// Query with specific model
+const result2 = await agent.processQuery(
+  'Analyze the code structure',
+  'claude-3-5-sonnet-20241022'
+);
+
+// Query with custom context
+const contextWindow = await Agent.createContextWindow();
+const result3 = await agent.processQuery(
+  'Continue our previous conversation',
+  undefined,
+  contextWindow
+);
+```
+
+### invokeTool()
+
+Manually executes a tool while preserving all agent bookkeeping. Works the same as if the agent called the tool itself.
+
+```typescript
+async invokeTool(
+  toolId: string,
+  args: Record<string, unknown>,
+  sessionState?: SessionState
+): Promise<unknown>
+```
+
+**Parameters:**
+- `toolId` - The identifier of the tool to run
+- `args` - Arguments for the tool
+- `sessionState` - Optional session (creates new one if omitted)
+
+**Returns:** Promise resolving to the raw value returned by the tool's execute method
+
+**Example:**
+```typescript
+// Read a file manually
+const fileContent = await agent.invokeTool('file_read', {
+  path: 'package.json'
+});
+
+// Execute bash command
+const bashResult = await agent.invokeTool('bash', {
+  command: 'ls -la',
+  workingDir: '/path/to/directory'
+});
+```
+
+### registerTool()
+
+Registers a new tool with the agent.
+
+```typescript
+registerTool(tool: Tool): void
+```
+
+**Parameters:**
+- `tool` - The tool to register
+
+**Example:**
+```typescript
+import { createTool } from '@qckfx/agent';
+
+const customTool = createTool({
+  id: 'custom_tool',
+  name: 'Custom Tool',
+  description: 'A custom tool for demonstration',
+  parameters: {
+    input: { type: 'string', description: 'Input text' }
+  },
+  requiredParameters: ['input'],
+  execute: async (args, context) => {
+    return `Processed: ${args.input}`;
+  }
+});
+
+agent.registerTool(customTool);
+```
+
+### on()
+
+Subscribes to an agent event.
+
+```typescript
+on<E extends BusEventKey>(
+  event: E, 
+  handler: (data: BusEvents[E]) => void
+): () => void
+```
+
+**Parameters:**
+- `event` - The event name to subscribe to
+- `handler` - The event handler function
+
+**Returns:** Function that can be called to unsubscribe the handler
+
+**Example:**
+```typescript
+// Subscribe to tool execution events
+const unsubscribe = agent.on('tool:execution:completed', (execution) => {
+  console.log(`Tool ${execution.toolName} completed in ${execution.executionTime}ms`);
+});
+
+// Unsubscribe later
+unsubscribe();
+```
+
+### off()
+
+Unsubscribes from an agent event.
+
+```typescript
+off<E extends BusEventKey>(
+  event: E, 
+  handler: (data: BusEvents[E]) => void
+): void
+```
+
+**Parameters:**
+- `event` - The event name to unsubscribe from
+- `handler` - The event handler function to remove
+
+### abort()
+
+Aborts the current agent operation.
+
+```typescript
+abort(): void
+```
+
+**Example:**
+```typescript
+// Start a long-running operation
+const queryPromise = agent.processQuery('Analyze this large codebase');
+
+// Abort after 30 seconds
+setTimeout(() => {
+  agent.abort();
+}, 30000);
+
+try {
+  const result = await queryPromise;
+} catch (error) {
+  if (agent.isAborted()) {
+    console.log('Operation was aborted');
+  }
+}
+```
+
+### isAborted()
+
+Checks if the agent is in an aborted state.
+
+```typescript
+isAborted(): boolean
+```
+
+**Returns:** True if the agent is aborted, false otherwise
+
+### clearAbort()
+
+Clears the abort state, allowing new operations.
+
+```typescript
+clearAbort(): void
+```
+
+### performRollback()
+
+Performs a rollback operation on the current session.
+
+```typescript
+performRollback(messageId: string): Promise<void>
+```
+
+**Parameters:**
+- `messageId` - ID of the message to rollback to
+
+### setFastEditMode()
+
+Enables or disables fast edit mode for file operations.
+
+```typescript
+setFastEditMode(enabled: boolean): void
+```
+
+**Parameters:**
+- `enabled` - Whether to enable fast edit mode
+
+<Info>
+Fast edit mode allows file writing operations without permission prompts, but shell commands still require approval.
+</Info>
+
+### setDangerMode()
+
+Enables or disables danger mode for all operations.
+
+```typescript
+setDangerMode(enabled: boolean): void
+```
+
+**Parameters:**
+- `enabled` - Whether to enable danger mode
+
+<Warning>
+Danger mode disables all permission prompts. Only use in secure, sandboxed environments.
+</Warning>
+
+## Properties
+
+### environment
+
+Gets the current execution environment type.
+
+```typescript
+get environment(): 'docker' | 'local' | 'remote' | undefined
+```
+
+**Returns:** The environment type or undefined if not set
+
+**Example:**
+```typescript
+console.log(`Agent running in ${agent.environment} environment`);
+```
+
+## Event Types
+
+The Agent class emits various events during operation. See [Event System](/sdk/events) for complete event documentation.
+
+### Available Events
+
+- `processing:started` - Query processing begins
+- `processing:completed` - Query processing completes
+- `processing:error` - Query processing encounters an error
+- `processing:aborted` - Query processing is aborted
+- `tool:execution:started` - Tool execution begins
+- `tool:execution:completed` - Tool execution completes
+- `tool:execution:error` - Tool execution encounters an error
+- `environment:status_changed` - Environment status changes
+- `checkpoint:ready` - Checkpoint is ready for rollback
+
+## Error Handling
+
+All Agent methods can throw errors. Common error scenarios:
+
+- **Configuration errors** - Invalid configuration during creation
+- **Model errors** - Invalid or unavailable model specified
+- **Tool errors** - Tool execution failures or permission denials
+- **Network errors** - LLM API connectivity issues
+- **Abort errors** - Operations interrupted by abort signals
+
+Always wrap Agent operations in try-catch blocks:
+
+```typescript
+try {
+  const result = await agent.processQuery('Your query');
+  console.log(result.response);
+} catch (error) {
+  if (error.message.includes('Permission denied')) {
+    console.log('Tool execution was denied');
+  } else if (agent.isAborted()) {
+    console.log('Operation was aborted');
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```

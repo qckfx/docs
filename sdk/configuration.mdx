@@ -1,0 +1,539 @@
+---
+title: "Configuration"
+description: "Agent configuration options and schema for the qckfx Agent SDK"
+icon: "gear"
+---
+
+The Agent configuration defines how your agent behaves, what tools it has access to, and how it connects to language models. Configuration is validated using Zod schemas to ensure type safety and proper setup.
+
+## AgentConfig Schema
+
+The main configuration object for creating agents.
+
+```typescript
+interface AgentConfig {
+  defaultModel?: string;
+  environment?: 'local';
+  logLevel?: 'debug' | 'info' | 'warn' | 'error';
+  systemPrompt?: string;
+  tools?: (string | ToolConfig)[];
+  experimentalFeatures?: {
+    subAgents?: boolean;
+  };
+}
+```
+
+## Configuration Properties
+
+### defaultModel
+
+The default language model to use for queries when no model is explicitly specified.
+
+```typescript
+defaultModel?: string
+```
+
+**Default:** `undefined` (must be provided in `processQuery` if not set)
+
+**Examples:**
+- `'claude-3-5-sonnet-20241022'`
+- `'gpt-4'`
+- `'anthropic/claude-3-haiku'` (when using OpenRouter)
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022'
+  }
+});
+```
+
+### environment
+
+The execution environment for tool operations.
+
+```typescript
+environment?: 'local'
+```
+
+**Default:** `'local'`
+
+**Options:**
+- `'local'` - Execute tools on the local machine
+- `'docker'` - Execute tools in a Docker container (requires additional setup)
+- `'remote'` - Execute tools on a remote machine (requires `getRemoteId` callback)
+
+<Info>
+Currently, only `'local'` environment is supported in the configuration schema. Docker and remote environments require additional setup through the core agent configuration.
+</Info>
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    environment: 'local'
+  }
+});
+```
+
+### logLevel
+
+Controls the verbosity of agent logging.
+
+```typescript
+logLevel?: 'debug' | 'info' | 'warn' | 'error'
+```
+
+**Default:** `'info'`
+
+**Levels:**
+- `'debug'` - Detailed debugging information
+- `'info'` - General information about agent operations
+- `'warn'` - Warning messages for potential issues
+- `'error'` - Only error messages
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    logLevel: 'debug' // Enable detailed logging
+  }
+});
+```
+
+### systemPrompt
+
+The system prompt that defines the agent's behavior and personality.
+
+```typescript
+systemPrompt?: string
+```
+
+**Default:** A default system prompt optimized for coding tasks
+
+The system prompt is automatically augmented with:
+- Repository git status and recent history
+- Directory structure information
+- Available tool descriptions
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    systemPrompt: `You are a senior software engineer with expertise in TypeScript and React. 
+    You write clean, maintainable code and follow best practices. 
+    Always explain your reasoning and suggest improvements when possible.`
+  }
+});
+```
+
+### tools
+
+Configuration for which tools the agent has access to. By default, agents have access to all built-in tools, but you can restrict this for specialized use cases.
+
+```typescript
+tools?: (string | ToolConfig)[]
+```
+
+**Default:** `null` (all built-in tools are available)
+
+**Important:** When `tools` is specified, the agent is **limited to only those tools**. This is useful for creating specialized agents with restricted capabilities.
+
+**Tool Specification:**
+- `string` - Name of a built-in tool to include
+- `ToolConfig` - Custom tool or sub-agent configuration
+
+**Built-in Tools Available:**
+- `'bash'` - Shell command execution
+- `'glob'` - File pattern matching
+- `'grep'` - Content search
+- `'ls'` - Directory listing
+- `'file_read'` - File reading
+- `'file_edit'` - File editing
+- `'file_write'` - File writing
+- `'think'` - Self-reflection tool
+- `'batch'` - Batch tool execution
+
+**Use Cases:**
+
+**Read-Only Research Agent:**
+```typescript
+const researchAgent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    systemPrompt: 'You are a research assistant focused on code analysis.',
+    tools: ['glob', 'grep', 'ls', 'file_read', 'think'] // No write/execute tools
+  }
+});
+```
+
+**File-Only Agent (No Shell Access):**
+```typescript
+const fileAgent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    tools: ['glob', 'grep', 'ls', 'file_read', 'file_edit', 'file_write'] // No bash
+  }
+});
+```
+
+### experimentalFeatures
+
+Enable experimental features that are still in development.
+
+```typescript
+experimentalFeatures?: {
+  subAgents?: boolean;
+}
+```
+
+**Default:** `{ subAgents: false }`
+
+**Features:**
+- `subAgents` - Enable the SubAgentTool for delegating tasks to specialized agents
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    experimentalFeatures: {
+      subAgents: true // Enable sub-agent functionality
+    }
+  }
+});
+```
+
+## Sub-Agent Configuration
+
+When `experimentalFeatures.subAgents` is enabled, you can configure sub-agents for specialized tasks. Sub-agents are nested agents with their own configurations that can be invoked by the main agent.
+
+### Sub-Agent Structure
+
+Sub-agents are defined in the `tools` array using the `ToolConfig` format:
+
+```typescript
+{
+  name: 'sub-agent-name',
+  configFile: './path/to/sub-agent-config.json'
+}
+```
+
+### Real-World Example: Documentation Writer with Browser Sub-Agent
+
+Here's an example of a main agent that uses a specialized browser sub-agent for codebase exploration:
+
+**Main Agent Configuration** (`.qckfx/documentation-writer.json`):
+```json
+{
+  "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+  "defaultModel": "claude-sonnet-4",
+  "systemPrompt": "You are DOCUMENTATION-WRITER, an expert technical documentation specialist...",
+  "tools": [
+    "bash",
+    "glob", 
+    "grep",
+    "ls",
+    "file_read",
+    "file_edit", 
+    "file_write",
+    "think",
+    "batch",
+    {
+      "name": "browser",
+      "configFile": ".qckfx/sub-agents/browser.json"
+    }
+  ],
+  "experimentalFeatures": {
+    "subAgents": true
+  }
+}
+```
+
+**Browser Sub-Agent Configuration** (`.qckfx/sub-agents/browser.json`):
+```json
+{
+  "$schema": "https://unpkg.com/@qckfx/sdk-schema@latest/agent-config.schema.json",
+  "defaultModel": "gpt-4.1-nano",
+  "systemPrompt": "You are BROWSER, an elite codebase exploration and intelligence-gathering sub-agent...",
+  "tools": ["glob", "grep", "ls", "file_read", "batch"]
+}
+```
+
+### Sub-Agent Benefits
+
+**Specialization**: Each sub-agent can be optimized for specific tasks with:
+- Targeted system prompts
+- Restricted tool sets
+- Appropriate models (faster/cheaper for simple tasks)
+
+**Cost Optimization**: Use smaller, faster models for sub-agents handling routine tasks:
+- Main agent: `claude-sonnet-4` for complex reasoning
+- Browser sub-agent: `gpt-4.1-nano` for file exploration
+
+**Security**: Limit sub-agent capabilities by restricting their tool access:
+- Read-only sub-agents for research tasks
+- File-only sub-agents without shell access
+
+### Usage in Code
+
+```typescript
+// Create main agent with sub-agent enabled
+const mainAgent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    systemPrompt: 'You are a senior developer with access to specialized tools.',
+    tools: [
+      'bash',
+      'file_read',
+      'file_write',
+      {
+        name: 'researcher',
+        configFile: './sub-agents/researcher.json'
+      }
+    ],
+    experimentalFeatures: {
+      subAgents: true
+    }
+  }
+});
+
+// The main agent can now delegate tasks to the researcher sub-agent
+const result = await mainAgent.processQuery(
+  'Research the codebase structure and create a summary'
+);
+```
+
+## Environment Variables
+
+The SDK requires certain environment variables to be set:
+
+### Required Variables
+
+#### LLM_API_KEY
+
+API key for your language model provider.
+
+```bash
+export LLM_API_KEY="your-api-key-here"
+```
+
+**Examples:**
+- OpenAI: `sk-...`
+- Anthropic: `sk-ant-...`
+- OpenRouter: `sk-or-...`
+
+### Optional Variables
+
+#### LLM_BASE_URL
+
+Base URL for the language model API. Defaults to OpenAI's API.
+
+```bash
+export LLM_BASE_URL="https://api.openai.com/v1"
+```
+
+**Common URLs:**
+- OpenAI: `https://api.openai.com/v1`
+- Anthropic: `https://api.anthropic.com/v1`
+- OpenRouter: `https://openrouter.ai/api/v1`
+- LiteLLM: `http://localhost:4000` (or your proxy URL)
+
+#### REMOTE_ID
+
+Remote environment identifier (only required for remote execution).
+
+```bash
+export REMOTE_ID="your-remote-environment-id"
+```
+
+## Complete Configuration Example
+
+```typescript
+import { Agent } from '@qckfx/agent';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+const agent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    environment: 'local',
+    logLevel: 'info',
+    systemPrompt: `You are an expert software architect and developer.
+    
+    Your responsibilities:
+    - Write clean, maintainable, and well-documented code
+    - Follow established patterns and best practices
+    - Suggest improvements and optimizations
+    - Explain your reasoning for technical decisions
+    
+    Always consider:
+    - Code readability and maintainability
+    - Performance implications
+    - Security best practices
+    - Testing strategies`,
+    tools: [
+      'custom-linter',
+      {
+        name: 'database-migration',
+        configFile: './tools/db-migration.json'
+      }
+    ],
+    experimentalFeatures: {
+      subAgents: true
+    }
+  },
+  callbacks: {
+    onProcessingStarted: (data) => {
+      console.log(`🤖 Processing query: ${data.query}`);
+    },
+    onToolExecutionCompleted: (execution) => {
+      console.log(`✅ ${execution.toolName} completed in ${execution.executionTime}ms`);
+    },
+    onProcessingError: (error) => {
+      console.error(`❌ Processing error: ${error.message}`);
+    }
+  }
+});
+```
+
+## Configuration Validation
+
+The SDK uses Zod for runtime configuration validation. Invalid configurations will throw a `ConfigValidationError` with detailed information about what's wrong.
+
+### Common Validation Errors
+
+```typescript
+// Missing required environment variable
+// Error: LLM_API_KEY environment variable is required
+
+// Invalid log level
+const agent = await Agent.create({
+  config: {
+    logLevel: 'verbose' // ❌ Invalid - must be 'debug' | 'info' | 'warn' | 'error'
+  }
+});
+
+// Invalid environment
+const agent = await Agent.create({
+  config: {
+    environment: 'cloud' // ❌ Invalid - must be 'local'
+  }
+});
+```
+
+## Dynamic Configuration
+
+Some configuration aspects can be changed at runtime:
+
+### Permission Modes
+
+```typescript
+// Enable fast edit mode (files without permission, bash still requires permission)
+agent.setFastEditMode(true);
+
+// Enable danger mode (no permissions required - use with caution!)
+agent.setDangerMode(true);
+```
+
+### Model Selection
+
+```typescript
+// Override default model for specific queries
+const result = await agent.processQuery(
+  'Analyze this code',
+  'claude-3-haiku-20240307' // Use faster model for simple tasks
+);
+```
+
+## Best Practices
+
+### 1. Environment-Specific Configuration
+
+Use different configurations for different environments:
+
+```typescript
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+const agent = await Agent.create({
+  config: {
+    logLevel: isDevelopment ? 'debug' : 'warn',
+    defaultModel: isDevelopment 
+      ? 'claude-3-haiku-20240307'  // Faster/cheaper for dev
+      : 'claude-3-5-sonnet-20241022' // Better quality for prod
+  }
+});
+```
+
+### 2. Secure API Key Management
+
+Never hardcode API keys. Use environment variables or secure secret management:
+
+```typescript
+// ✅ Good - use environment variables
+const agent = await Agent.create({
+  config: {
+    // API key loaded from LLM_API_KEY environment variable
+  }
+});
+
+// ❌ Bad - hardcoded API key
+const agent = await Agent.create({
+  config: {
+    apiKey: 'sk-...' // Never do this!
+  }
+});
+```
+
+### 3. Meaningful System Prompts
+
+Craft system prompts that clearly define the agent's role and constraints:
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    systemPrompt: `You are a code review assistant specializing in TypeScript and React.
+    
+    Guidelines:
+    - Focus on code quality, performance, and maintainability
+    - Suggest specific improvements with examples
+    - Identify potential bugs or security issues
+    - Recommend best practices and patterns
+    - Be constructive and educational in your feedback
+    
+    Constraints:
+    - Only suggest changes that improve the code
+    - Explain the reasoning behind each suggestion
+    - Consider the existing codebase patterns and style`
+  }
+});
+```
+
+### 4. Gradual Feature Adoption
+
+Start with basic configuration and gradually add features:
+
+```typescript
+// Start simple
+const basicAgent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    systemPrompt: 'You are a helpful coding assistant.'
+  }
+});
+
+// Add features as needed
+const advancedAgent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    logLevel: 'debug',
+    systemPrompt: 'Detailed system prompt...',
+    tools: ['custom-tool'],
+    experimentalFeatures: {
+      subAgents: true
+    }
+  },
+  callbacks: {
+    onToolExecutionCompleted: (execution) => {
+      // Custom logging or metrics
+    }
+  }
+});
+```

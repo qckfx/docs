@@ -1,0 +1,103 @@
+---
+title: "API Reference"
+description: "Complete API reference for the qckfx Agent SDK"
+icon: "code"
+---
+
+The qckfx Agent SDK provides a comprehensive set of classes, types, and utilities for building AI agents. This reference covers all public APIs available in the `@qckfx/agent` package.
+
+## Core Classes
+
+### Agent
+
+The main entry point for creating and managing AI agents.
+
+<CardGroup cols={2}>
+  <Card title="Agent Class" href="/sdk/agent-class" icon="robot">
+    Complete reference for the Agent class including all methods and properties
+  </Card>
+  <Card title="Configuration" href="/sdk/configuration" icon="gear">
+    Agent configuration options and schema
+  </Card>
+</CardGroup>
+
+## Tools & Execution
+
+<CardGroup cols={2}>
+  <Card title="Tool System" href="/sdk/tools" icon="wrench">
+    Tool creation, registration, and execution
+  </Card>
+  <Card title="Built-in Tools" href="/sdk/built-in-tools" icon="toolbox">
+    Reference for all built-in tools available to agents
+  </Card>
+</CardGroup>
+
+## Types & Interfaces
+
+<CardGroup cols={2}>
+  <Card title="Core Types" href="/sdk/types" icon="brackets-curly">
+    Essential types and interfaces for agent development
+  </Card>
+  <Card title="Event System" href="/sdk/events" icon="bell">
+    Event types and callback interfaces
+  </Card>
+</CardGroup>
+
+## Context & Sessions
+
+<CardGroup cols={2}>
+  <Card title="Context Window" href="/sdk/context-window" icon="window">
+    Managing conversation context and message history
+  </Card>
+  <Card title="Session Management" href="/sdk/sessions" icon="clock">
+    Session state, rollbacks, and multi-repo tracking
+  </Card>
+</CardGroup>
+
+## Quick Reference
+
+### Installation
+
+```bash
+npm install @qckfx/agent
+```
+
+### Basic Usage
+
+```typescript
+import { Agent } from '@qckfx/agent';
+
+// Create agent with configuration
+const agent = await Agent.create({
+  config: {
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    environment: 'local',
+    systemPrompt: 'You are a helpful coding assistant.'
+  }
+});
+
+// Process a query
+const result = await agent.processQuery('What files are in this directory?');
+console.log(result.response);
+```
+
+### Environment Variables
+
+The SDK requires these environment variables:
+
+- `LLM_API_KEY` - API key for your LLM provider
+- `LLM_BASE_URL` - Base URL for LLM API (optional, defaults to OpenAI)
+- `REMOTE_ID` - Remote environment ID (only for remote execution)
+
+### Error Handling
+
+All SDK methods can throw errors. Always wrap calls in try-catch blocks:
+
+```typescript
+try {
+  const result = await agent.processQuery('Your query here');
+  console.log(result.response);
+} catch (error) {
+  console.error('Agent error:', error.message);
+}
+```
