@@ -35,9 +35,21 @@
             ]
           },
           {
+            "group": "CLI Reference",
+            "pages": [
+              "cli/index",
+              "cli/qckfx-command",
+              "cli/validation",
+              "cli/sessions",
+              "cli/sub-agents",
+              "cli/litellm-setup"
+            ]
+          },
+          {
             "group": "Applications",
             "pages": [
-              "applications/github-actions"
+              "applications/github-actions",
+              "applications/agent-self-improvement"
             ]
           },
           {
@@ -67,7 +79,7 @@
         },
         {
           "anchor": "Reference",
-          "href": "https://docs.qckfx.com/reference/introduction",
+          "href": "/sdk/api-reference",
           "icon": "code"
         }
       ]
