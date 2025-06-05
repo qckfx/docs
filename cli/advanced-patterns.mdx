@@ -1,0 +1,291 @@
+---
+title: "Advanced CLI Patterns"
+description: "Master advanced CLI usage patterns for dynamic agent, model, and sub-agent switching within continuing conversations"
+icon: "wand-magic-sparkles"
+---
+
+The qckfx CLI's session management enables powerful advanced patterns where you can dynamically change agents, models, and sub-agents while maintaining conversation context. This allows for sophisticated workflows that adapt to evolving requirements within a single conversation thread.
+
+## Core Concept: Dynamic Context Switching
+
+Since sessions are tied to your working directory, you can use different CLI configurations for each message while maintaining conversation history. This enables:
+
+- **Agent Switching**: Move between specialized agent configurations
+- **Model Switching**: Upgrade or downgrade model capabilities mid-conversation  
+- **Sub-agent Flexibility**: Add or remove specialized tools as needed
+
+<Info>
+All examples assume you're working in the same directory throughout the conversation. Session continuity depends on maintaining the same working directory.
+</Info>
+
+## Pattern 1: Agent to Model Switching
+
+Start with a specialized agent configuration, then switch to a direct model for simpler follow-ups.
+
+### Example: Security Analysis to Quick Questions
+
+```bash
+# Initial message: Use specialized security agent
+qckfx -a security-agent "Analyze this codebase for potential security vulnerabilities"
+
+# Follow-up: Switch to direct model for quick clarification
+qckfx -c -m claude-sonnet-4 "What's the difference between XSS and CSRF again?"
+
+# Continue: Back to security agent for detailed work
+qckfx -c -a security-agent "Now help me fix the XSS vulnerability you found"
+```
+
+**Why This Works:**
+- The security agent has specialized tools and prompts for vulnerability analysis
+- Direct model access is faster for simple conceptual questions
+- Returning to the agent provides full tooling for implementation
+
+### Example: Documentation Agent to Model Comparison
+
+```bash
+# Start with documentation-focused agent
+qckfx -a docs-agent "Generate API documentation for this Express.js application"
+
+# Switch to powerful model for comparison
+qckfx -c -m claude-sonnet-4 "Compare this API design with REST best practices"
+
+# Continue with original agent for updates
+qckfx -c -a docs-agent "Update the documentation based on those recommendations"
+```
+
+## Pattern 2: Model to Agent Switching
+
+Begin with a direct model call, then escalate to a specialized agent when you need more capabilities.
+
+### Example: Quick Question to Deep Analysis
+
+```bash
+# Start simple: Direct model for quick assessment
+qckfx -m gemini-2.5-pro "Is this React component following best practices?"
+
+# Escalate: Switch to specialized agent for detailed analysis
+qckfx -c -a code-review-agent "Now perform a comprehensive code review with specific recommendations"
+
+# Continue: Use agent's full capabilities
+qckfx -c -a code-review-agent "Generate unit tests for the issues you identified"
+```
+
+### Example: Brainstorming to Implementation
+
+```bash
+# Brainstorm with a creative model
+qckfx -m claude-sonnet-4 "Help me brainstorm features for a task management app"
+
+# Switch to development agent for implementation
+qckfx -c -a fullstack-agent "Let's implement the priority-based task sorting feature"
+
+# Continue development work
+qckfx -c -a fullstack-agent "Add database migrations for the new priority field"
+```
+
+## Pattern 3: Sub-agent Addition and Removal
+
+Dynamically add sub-agents when you need specialized capabilities, then remove them when they're no longer needed.
+
+### Example: Research Phase to Implementation Phase
+
+```bash
+# Phase 1: Start with research sub-agent
+qckfx --with-subagent browser "Research the latest authentication patterns for Node.js applications"
+
+# Phase 2: Remove research, add database sub-agent for schema design
+qckfx -c --with-subagent database "Design a user authentication schema based on that research"
+
+# Phase 3: Remove sub-agents, use base agent for implementation
+qckfx -c "Implement the authentication middleware using the schema we designed"
+```
+
+**Pattern Breakdown:**
+- **Message 1**: Browser sub-agent provides web research capabilities
+- **Message 2**: Database sub-agent provides schema design expertise  
+- **Message 3**: Base agent handles straightforward implementation
+
+### Example: Multi-Phase Analysis
+
+```bash
+# Initial analysis with multiple sub-agents
+qckfx --with-subagent browser security "Analyze current security trends and assess our application"
+
+# Focus on security recommendations
+qckfx -c --with-subagent security "Provide specific security improvements for our codebase"
+
+# Implementation without sub-agents
+qckfx -c "Implement the recommended security headers middleware"
+```
+
+## Pattern 4: Complex Multi-Agent Workflows
+
+Combine agent switching, model changes, and sub-agent management for sophisticated workflows.
+
+### Example: Full Development Lifecycle
+
+```bash
+# 1. Research phase: Model + research sub-agent
+qckfx -m claude-sonnet-4 --with-subagent browser "Research modern React state management solutions"
+
+# 2. Architecture phase: Switch to architecture agent
+qckfx -c -a architecture-agent "Design a state management architecture for our e-commerce app"
+
+# 3. Security review: Add security sub-agent
+qckfx -c -a architecture-agent --with-subagent security "Review the architecture for security implications"
+
+# 4. Implementation: Switch to development agent, remove sub-agents
+qckfx -c -a fullstack-agent "Implement the Redux Toolkit setup based on our architecture"
+
+# 5. Testing: Add testing sub-agent
+qckfx -c -a fullstack-agent --with-subagent testing "Generate comprehensive tests for the state management"
+
+# 6. Documentation: Switch to docs agent
+qckfx -c -a docs-agent "Create developer documentation for the state management implementation"
+```
+
+### Example: Debugging Workflow
+
+```bash
+# 1. Initial problem assessment with general model
+qckfx -m gemini-2.5-pro "I'm getting a 500 error in my API. Help me understand what might be wrong"
+
+# 2. Deep debugging with specialized agent and database sub-agent
+qckfx -c -a debug-agent --with-subagent database "Analyze the database queries and connection issues"
+
+# 3. Security check during debugging
+qckfx -c -a debug-agent --with-subagent security "Check if this error reveals any security vulnerabilities"
+
+# 4. Final fix with development agent
+qckfx -c -a fullstack-agent "Implement the fix with proper error handling and logging"
+```
+
+## Pattern 5: Model Capability Scaling
+
+Dynamically adjust model capabilities based on task complexity within the same conversation.
+
+### Example: Progressive Complexity
+
+```bash
+# Start with efficient model for simple tasks
+qckfx -m gemini-2.5-pro "List the main components in this React application"
+
+# Scale up for complex analysis
+qckfx -c -m claude-sonnet-4 "Analyze the component architecture and suggest performance optimizations"
+
+# Scale down for implementation
+qckfx -c -m gemini-2.5-pro "Implement the memoization changes you suggested"
+
+# Scale up for final review
+qckfx -c -m claude-sonnet-4 "Review the changes and ensure they follow React best practices"
+```
+
+### Example: Cost-Conscious Development
+
+```bash
+# Use cost-effective model for routine tasks
+qckfx -m gemini-2.5-pro "Add TypeScript types to this JavaScript file"
+
+# Upgrade for complex problem-solving
+qckfx -c -m claude-sonnet-4 "This type inference is failing. Help me debug the complex generic types"
+
+# Return to efficient model for implementation
+qckfx -c -m gemini-2.5-pro "Apply the type fixes you identified"
+```
+
+## Best Practices
+
+### 1. Plan Your Workflow
+
+Think about the natural progression of your task:
+
+```bash
+# Good: Logical progression
+Research → Architecture → Implementation → Testing → Documentation
+
+# Less optimal: Random switching without clear purpose
+```
+
+### 2. Match Tools to Tasks
+
+Choose the right combination for each phase:
+
+- **Research**: Models + browser sub-agent
+- **Architecture**: Specialized agents + relevant sub-agents
+- **Implementation**: Development agents with minimal sub-agents
+- **Review**: Powerful models or review agents + security sub-agents
+
+### 3. Maintain Context Awareness
+
+Remember that conversation history carries forward:
+
+```bash
+# Good: Reference previous context
+qckfx -c -a new-agent "Based on the security analysis we just completed, implement the fixes"
+
+# Less clear: Assume context without reference
+qckfx -c -a new-agent "Implement the fixes"
+```
+
+### 4. Use Descriptive Transitions
+
+Make your intent clear when switching contexts:
+
+```bash
+# Good: Clear transition
+qckfx -c -m claude-sonnet-4 "Now I need a more powerful model to analyze this complex algorithm"
+
+# Better: Explain the switch
+qckfx -c -a performance-agent "Switching to our performance specialist to optimize this code"
+```
+
+## Common Patterns Summary
+
+| Pattern | Use Case | Example Transition |
+|---------|----------|-------------------|
+| **Agent → Model** | Specialized analysis → Quick questions | `security-agent` → `claude-sonnet-4` |
+| **Model → Agent** | Brainstorming → Implementation | `claude-sonnet-4` → `fullstack-agent` |
+| **Add Sub-agent** | Need specialized capability | Base → `--with-subagent browser` |
+| **Remove Sub-agent** | Simplify for implementation | `--with-subagent research` → Base |
+| **Model Scaling** | Adjust complexity/cost | `gemini-2.5-pro` → `claude-sonnet-4` |
+
+## Troubleshooting
+
+### Context Loss Issues
+
+If context seems lost between switches:
+
+```bash
+# Verify you're in the same directory
+pwd
+
+# Check session exists
+qckfx -c "Summarize our conversation so far"
+```
+
+### Configuration Conflicts
+
+If agent/model combinations don't work as expected:
+
+```bash
+# Validate configurations
+qckfx --validate my-agent.json
+
+# Test sub-agent resolution
+qckfx --with-subagent browser --validate
+```
+
+### Performance Considerations
+
+For long conversations with many switches:
+
+- Monitor token usage across different models
+- Consider starting fresh sessions for unrelated topics
+- Use cost-effective models for routine tasks
+
+## Related Topics
+
+- [Session Management](/cli/sessions) - Understanding conversation persistence
+- [qckfx Command](/cli/qckfx-command) - Complete CLI reference
+- [Sub-agents](/cli/sub-agents) - Specialized agent tools
+- [Agent Configuration](/sdk/configuration) - Creating custom agents
