@@ -1,0 +1,207 @@
+---
+title: "Session Management"
+description: "Comprehensive guide to sessions, state management, and conversation context"
+icon: "comments"
+---
+
+Every interaction with an agent occurs within a session. Sessions maintain conversation context, track tool executions, and preserve state across multiple queries. The Agent automatically manages sessions for you, but understanding how they work is crucial for building sophisticated applications.
+
+## Understanding Sessions
+
+Sessions provide continuity between agent interactions, allowing for natural conversation flow and context preservation:
+
+```typescript
+// Each processQuery call continues the same session
+const result1 = await agent.processQuery("What files are in this directory?");
+const result2 = await agent.processQuery("Show me the contents of the largest file");
+// The agent remembers the file listing from result1
+```
+
+## Session State
+
+Sessions contain rich state information that tracks the entire conversation and execution context:
+
+```typescript
+interface SessionState {
+  id: string;                           // Unique session identifier
+  contextWindow: ContextWindow;         // Conversation history
+  aborted: boolean;                     // Session abort status
+  abortController: AbortController;     // For canceling operations
+  executionAdapter?: ExecutionAdapter;  // Runtime environment
+  tokenUsage?: TokenUsage;             // Token consumption tracking
+  cacheMetrics?: CacheMetricsTracking; // Prompt caching stats
+  multiRepoTracking?: MultiRepoInfo;   // Multi-repository support
+}
+```
+
+### Key Session Components
+
+**Context Window**: Maintains the conversation history including user messages, assistant responses, and tool execution results.
+
+**Abort Controller**: Provides cancellation capabilities for long-running operations.
+
+**Execution Adapter**: Links the session to the specific execution environment (local, Docker, or remote).
+
+## Session Control
+
+The Agent provides comprehensive methods for session management:
+
+### Abort Operations
+
+```typescript
+// Abort the current session
+agent.abort();
+
+// Check if session is aborted
+if (agent.isAborted()) {
+  console.log('Session was aborted');
+}
+
+// Clear abort status to resume operations (the agent will naturally clear this on next query)
+agent.clearAbort();
+```
+
+### Rollback Functionality
+
+Rollback allows you to revert the conversation to a previous state:
+
+```typescript
+// Rollback to a specific message (rollbacks environment changes as well)
+agent.performRollback(messageId);
+
+// Static rollback with custom session (only influences message history, not environment)
+await Agent.performRollback(sessionState, messageId);
+```
+
+## Context Windows
+
+Context windows manage the conversation history and determine what information is available to the agent during each interaction.
+
+### Creating Custom Context Windows
+
+```typescript
+// Create a custom context window with previous conversation
+const contextWindow = await Agent.createContextWindow([
+  { role: 'user', content: 'Previous conversation...' },
+  { role: 'assistant', content: 'Previous response...' }
+]);
+
+// Use it in a query
+const result = await agent.processQuery(
+  "Continue from where we left off",
+  undefined,
+  contextWindow
+);
+```
+
+### Context Window Management
+
+Context windows automatically manage:
+- **Message History**: All user queries and assistant responses
+- **Tool Execution Results**: Output from tool invocations
+- **Token Limits**: Automatic truncation when approaching model limits
+- **Relevance Filtering**: Keeping the most relevant context for current tasks
+
+## Advanced Session Features
+
+### Multi-Repository Support (intended for remote environment use)
+
+Sessions can track operations across multiple repositories:
+
+```typescript
+// Get multi-repo information
+const repoInfo = Agent.getMultiRepoInfo(sessionState);
+if (repoInfo) {
+  console.log(`Tracking ${repoInfo.repoCount} repositories`);
+  console.log('Repo paths:', repoInfo.repoPaths);
+}
+
+// Get repository count
+const count = Agent.getRepositoryCount(sessionState);
+
+// Get repository paths
+const paths = Agent.getRepositoryPaths(sessionState);
+```
+
+### Token Usage Tracking (Currently unmaintained and broken)
+
+Monitor token consumption for cost optimization:
+
+```typescript
+// Access token usage from session state
+if (sessionState.tokenUsage) {
+  console.log('Input tokens:', sessionState.tokenUsage.inputTokens);
+  console.log('Output tokens:', sessionState.tokenUsage.outputTokens);
+  console.log('Total cost:', sessionState.tokenUsage.totalCost);
+}
+```
+
+### Cache Metrics (Currently unmaintained and broken)
+
+Track prompt caching effectiveness:
+
+```typescript
+// Monitor cache performance
+if (sessionState.cacheMetrics) {
+  console.log('Cache hits:', sessionState.cacheMetrics.hits);
+  console.log('Cache misses:', sessionState.cacheMetrics.misses);
+  console.log('Cache efficiency:', sessionState.cacheMetrics.efficiency);
+}
+```
+
+## Session Lifecycle
+
+Understanding the session lifecycle helps optimize agent performance:
+
+1. **Initialization**: Session created with unique ID and empty context
+2. **Context Building**: Messages and tool results added to context window
+3. **State Tracking**: Execution state, token usage, and metrics updated
+4. **Persistence**: Session state maintained across multiple queries
+5. **Cleanup**: Session resources released when no longer needed
+
+## Best Practices
+
+### Session Management
+
+- **Reuse Sessions**: Keep sessions alive for related conversations
+- **Monitor Token Usage**: Track consumption to avoid unexpected costs
+- **Handle Aborts Gracefully**: Implement proper error handling for aborted sessions
+- **Use Rollbacks Strategically**: Rollback to recover from errors or unwanted states
+
+### Context Window Optimization
+
+- **Relevant Context**: Include only necessary conversation history
+- **Token Awareness**: Monitor context size to avoid truncation
+- **Strategic Rollbacks**: Use rollbacks to manage context window size
+- **Tool Result Filtering**: Keep only relevant tool execution results
+
+### Performance Considerations
+
+- **Cache Utilization**: Leverage prompt caching for repeated patterns
+- **Batch Operations**: Group related operations to minimize context switching
+- **Session Pooling**: Reuse sessions for similar tasks when appropriate
+
+## Error Handling
+
+Implement robust error handling for session operations:
+
+```typescript
+try {
+  const result = await agent.processQuery("Complex operation");
+} catch (error) {
+  if (agent.isAborted()) {
+    console.log('Operation was aborted');
+    agent.clearAbort(); // Reset for next operation
+  } else {
+    console.error('Session error:', error);
+    // Consider rollback or session reset
+  }
+}
+```
+
+## Next Steps
+
+- Explore the [Agent Architecture](/concepts/agent) to understand the core agent functionality
+- Learn about the [Tool System](/concepts/tools) to see how tools integrate with sessions
+- Understand [Environment Types](/concepts/environments) for different execution contexts
+- Check out [Getting Started](/get-started) for practical session management examples

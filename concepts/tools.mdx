@@ -1,0 +1,403 @@
+---
+title: "Tool System"
+description: "Complete guide to the tool architecture, built-in tools, execution flow, and creating custom tools"
+icon: "wrench"
+---
+
+Tools are the primary way agents interact with the external world. Each tool is a self-contained module that can perform specific operations like reading files, executing commands, or searching content. The qckfx Agent SDK includes a comprehensive set of built-in tools and supports custom tool development.
+
+## Tool Architecture
+
+Every tool in the system implements a consistent interface that ensures predictable behavior and seamless integration:
+
+```typescript
+interface Tool {
+  id: string;                   // Unique tool identifier
+  name: string;                 // Human-readable name
+  description: string;          // What the tool does
+  requiresPermission: boolean;  // Whether execution needs approval
+  parameters: Record<string, ParameterSchema>; // Input schema
+  execute: (args: any, context: ToolContext) => Promise<ToolResult>;
+}
+```
+
+### Tool Categories
+
+Tools are organized into categories based on their functionality and risk level:
+
+- **READONLY**: Safe operations that only read data
+- **WRITE**: Operations that modify files or state
+- **EXECUTE**: Operations that run commands or scripts
+- **NETWORK**: Operations that make network requests
+- **SYSTEM**: Low-level system operations
+
+## Built-in Tools
+
+The SDK includes a comprehensive set of built-in tools organized by functionality:
+
+<CardGroup cols={2}>
+  <Card title="File Operations" icon="file">
+    - **file_read**: Read file contents with line numbering
+    - **file_write**: Create new files or overwrite existing ones
+    - **file_edit**: Make targeted edits to existing files
+    - **ls**: List directory contents with metadata
+  </Card>
+  
+  <Card title="Search & Discovery" icon="magnifying-glass">
+    - **glob**: Find files using glob patterns
+    - **grep**: Search file contents with regex support
+    - **bash**: Execute shell commands and scripts
+  </Card>
+  
+  <Card title="Workflow Tools" icon="workflow">
+    - **batch**: Execute multiple tools in parallel
+    - **think**: Agent reasoning and planning
+    - **sub_agent**: Delegate tasks to specialized agents
+  </Card>
+</CardGroup>
+
+### File Operations
+
+**file_read**: Reads file contents with optional line numbering and pagination:
+```typescript
+const result = await agent.invokeTool('file_read', {
+  path: 'src/index.ts',
+  lineOffset: 10,
+  lineCount: 50
+});
+```
+
+**file_write**: Creates new files or overwrites existing ones:
+```typescript
+const result = await agent.invokeTool('file_write', {
+  path: 'output.txt',
+  content: 'Hello, world!',
+  overwrite: true
+});
+```
+
+**file_edit**: Makes targeted edits to existing files:
+```typescript
+const result = await agent.invokeTool('file_edit', {
+  path: 'src/config.ts',
+  searchCode: 'const oldValue = "old";',
+  replaceCode: 'const newValue = "new";'
+});
+```
+
+**ls**: Lists directory contents with detailed metadata:
+```typescript
+const result = await agent.invokeTool('ls', {
+  path: './src',
+  showHidden: true,
+  details: true
+});
+```
+
+### Search & Discovery
+
+**glob**: Finds files using powerful glob patterns:
+```typescript
+const result = await agent.invokeTool('glob', {
+  pattern: '**/*.ts',
+  cwd: 'src',
+  nodir: true
+});
+```
+
+**grep**: Searches file contents with regex support:
+```typescript
+const result = await agent.invokeTool('grep', {
+  pattern: 'function.*create',
+  path: 'src',
+  filePattern: '*.ts',
+  ignoreCase: true
+});
+```
+
+**bash**: Executes shell commands and scripts:
+```typescript
+const result = await agent.invokeTool('bash', {
+  command: 'npm test',
+  workingDir: './project'
+});
+```
+
+### Workflow Tools
+
+**batch**: Executes multiple tools in parallel for efficiency:
+```typescript
+const result = await agent.invokeTool('batch', {
+  description: 'Read multiple files',
+  invocations: [
+    { tool_name: 'file_read', input: { path: 'package.json' } },
+    { tool_name: 'file_read', input: { path: 'tsconfig.json' } }
+  ]
+});
+```
+
+**think**: Provides agent reasoning and planning capabilities:
+```typescript
+const result = await agent.invokeTool('think', {
+  thought: 'I need to analyze the codebase structure before making changes'
+});
+```
+
+## Tool Execution Flow
+
+Understanding the execution flow helps optimize tool usage and debug issues:
+
+1. **Query Analysis**: Agent analyzes the natural language query
+2. **Tool Selection**: Agent chooses appropriate tools to accomplish the task
+3. **Argument Validation**: Tool arguments are validated against schemas
+4. **Permission Check**: Permission manager verifies execution is allowed
+5. **Execution**: Tool runs in the configured execution environment
+6. **Result Integration**: Results are added to conversation context
+7. **Response Generation**: Agent synthesizes a natural language response
+
+### Execution Context
+
+Each tool execution receives a context object with session information:
+
+```typescript
+interface ToolContext {
+  sessionState: SessionState;
+  executionAdapter: ExecutionAdapter;
+  logger: Logger;
+  abortSignal?: AbortSignal;
+}
+```
+
+## Permission Management
+
+The Agent includes sophisticated permission management to control tool execution:
+
+### Permission Modes
+
+```typescript
+// Enable fast edit mode (auto-approve file operations)
+agent.setFastEditMode(true);
+
+// Enable danger mode (auto-approve ALL operations - use carefully!)
+agent.setDangerMode(true);
+
+// Check current environment
+console.log('Running in:', agent.environment); // 'local', 'docker', or 'remote'
+```
+
+### Permission Levels
+
+- **No Permission Required**: Safe read-only operations
+- **File Permission**: File modification operations
+- **Execute Permission**: Command execution and system operations
+- **Network Permission**: Network requests and external API calls
+
+## Creating Custom Tools
+
+Extend the agent's capabilities by creating custom tools:
+
+```typescript
+import { createTool, ToolCategory } from '@qckfx/agent';
+
+const customTool = createTool({
+  id: 'my-custom-tool',
+  name: 'Custom Tool',
+  description: 'Performs a custom operation',
+  category: ToolCategory.READONLY,
+  requiresPermission: false,
+  parameters: {
+    input: {
+      type: 'string',
+      description: 'Input parameter'
+    },
+    options: {
+      type: 'object',
+      description: 'Optional configuration',
+      properties: {
+        format: { type: 'string', enum: ['json', 'text'] }
+      }
+    }
+  },
+  requiredParameters: ['input'],
+  execute: async (args, context) => {
+    // Your custom logic here
+    const { input, options } = args;
+    const { sessionState, logger } = context;
+    
+    try {
+      // Perform your custom operation
+      const result = await performCustomOperation(input, options);
+      
+      return {
+        ok: true,
+        data: result
+      };
+    } catch (error) {
+      logger.error('Custom tool error:', error);
+      return {
+        ok: false,
+        error: error.message
+      };
+    }
+  }
+});
+
+// Register with the agent
+agent.registerTool(customTool);
+```
+
+### Tool Development Best Practices
+
+**Parameter Validation**: Always validate input parameters:
+```typescript
+if (!args.input || typeof args.input !== 'string') {
+  return { ok: false, error: 'Invalid input parameter' };
+}
+```
+
+**Error Handling**: Implement comprehensive error handling:
+```typescript
+try {
+  const result = await riskyOperation();
+  return { ok: true, data: result };
+} catch (error) {
+  context.logger.error('Tool execution failed:', error);
+  return { ok: false, error: error.message };
+}
+```
+
+**Abort Signal Support**: Respect cancellation requests:
+```typescript
+if (context.abortSignal?.aborted) {
+  return { ok: false, error: 'Operation was aborted' };
+}
+```
+
+**Logging**: Use the provided logger for debugging:
+```typescript
+context.logger.info('Starting custom operation', { input: args.input });
+```
+
+## Advanced Tool Features
+
+### Tool Chaining
+
+Tools can invoke other tools through the execution context:
+```typescript
+// Within a custom tool's execute function
+const fileContent = await context.executionAdapter.readFile(
+  context.sessionState.id,
+  args.filePath
+);
+```
+
+### Dynamic Tool Registration
+
+Register tools conditionally based on environment or configuration:
+```typescript
+if (process.env.NODE_ENV === 'development') {
+  agent.registerTool(debugTool);
+}
+```
+
+### Tool Metadata
+
+Provide rich metadata for better agent understanding:
+```typescript
+const tool = createTool({
+  id: 'advanced-analyzer',
+  name: 'Advanced Code Analyzer',
+  description: 'Performs deep static analysis of code files with security scanning',
+  category: ToolCategory.READONLY,
+  tags: ['analysis', 'security', 'code-quality'],
+  examples: [
+    {
+      description: 'Analyze a TypeScript file',
+      args: { file: 'src/index.ts', includeSecurityScan: true }
+    }
+  ],
+  // ... rest of tool definition
+});
+```
+
+## Tool Performance Optimization
+
+### Batch Operations
+
+Use the batch tool for parallel execution:
+```typescript
+// Instead of sequential tool calls
+const file1 = await agent.invokeTool('file_read', { path: 'file1.ts' });
+const file2 = await agent.invokeTool('file_read', { path: 'file2.ts' });
+
+// Use batch for parallel execution
+const results = await agent.invokeTool('batch', {
+  description: 'Read multiple files',
+  invocations: [
+    { tool_name: 'file_read', input: { path: 'file1.ts' } },
+    { tool_name: 'file_read', input: { path: 'file2.ts' } }
+  ]
+});
+```
+
+### Caching Strategies
+
+Implement caching in custom tools for repeated operations:
+```typescript
+const cache = new Map();
+
+const cachedTool = createTool({
+  // ... tool definition
+  execute: async (args, context) => {
+    const cacheKey = JSON.stringify(args);
+    
+    if (cache.has(cacheKey)) {
+      return cache.get(cacheKey);
+    }
+    
+    const result = await expensiveOperation(args);
+    cache.set(cacheKey, result);
+    
+    return result;
+  }
+});
+```
+
+## Debugging Tools
+
+### Tool Execution Monitoring
+
+Monitor tool execution through the event system:
+```typescript
+agent.on('tool:execution:started', (execution) => {
+  console.log(`Tool ${execution.toolName} started:`, execution.args);
+});
+
+agent.on('tool:execution:completed', (execution) => {
+  console.log(`Tool ${execution.toolName} completed:`, execution.result);
+});
+
+agent.on('tool:execution:error', (execution) => {
+  console.error(`Tool ${execution.toolName} failed:`, execution.error);
+});
+```
+
+### Tool Result Inspection
+
+Examine tool results for debugging:
+```typescript
+const result = await agent.invokeTool('file_read', { path: 'config.json' });
+
+if (!result.ok) {
+  console.error('Tool execution failed:', result.error);
+} else {
+  console.log('Tool result:', result.data);
+}
+```
+
+## Next Steps
+
+- Learn about [Agent Architecture](/concepts/agent) to understand how tools integrate with agents
+- Explore [Session Management](/concepts/sessions) to see how tools interact with session state
+- Understand [Environment Types](/concepts/environments) for different tool execution contexts
+- Check out [Getting Started](/get-started) for practical tool usage examples

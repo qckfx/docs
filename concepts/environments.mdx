@@ -1,0 +1,307 @@
+---
+title: "Environment Types"
+description: "Understanding local, Docker, and remote execution environments for agent tools"
+icon: "server"
+---
+
+The execution environment determines where and how tools run. The qckfx Agent SDK supports three environment types, with **local execution being the primary supported option**. Understanding these environments helps you choose the right setup for your security, performance, and isolation requirements.
+
+## Local Environment (Primary Support)
+
+<Warning>
+**Only Supported Environment**: According to the current schema, only 'local' execution is supported. The environment field only accepts the string 'local', not an object.
+</Warning>
+
+The local execution adapter runs tools directly in the same process as your application:
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    environment: 'local', // String value, not object
+    defaultModel: 'claude-sonnet-3-7',
+    // ... other config
+  }
+});
+```
+
+### Characteristics
+
+**✅ Fully supported** and actively maintained
+- **Fast execution** with no container overhead
+- **Direct file system access** to your project
+- **Simple setup** with no additional dependencies
+- **Native performance** for all tool operations
+
+**⚠️ Security consideration**: Tools run with the same permissions as your application
+
+### Use Cases
+
+Local execution is ideal for:
+- **Development and testing** environments
+- **Trusted environments** where security isolation isn't critical
+- **Performance-critical applications** requiring minimal overhead
+- **Simple deployments** without container infrastructure
+
+### Setup
+
+No additional setup required beyond installing the SDK:
+
+```bash
+npm install @qckfx/agent
+```
+
+```typescript
+import { Agent } from '@qckfx/agent';
+
+const agent = await Agent.create({
+  config: {
+    environment: 'local',
+    defaultModel: 'claude-sonnet-3-7',
+    tools: ['bash', 'file_read', 'file_write', 'file_edit']
+  }
+});
+```
+
+## Docker Environment (Limited Support)
+
+<Info>
+**Limited Support**: While the Docker execution adapter exists and may work, it's not currently the development team's priority. Use with caution and expect potential issues.
+</Info>
+
+The Docker adapter runs tools in an isolated container environment:
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    environment: { 
+      type: 'docker',
+      docker: {
+        projectRoot: '/path/to/your/project'
+      }
+    },
+    // ... other config
+  }
+});
+```
+
+### Characteristics
+
+**🔒 Isolated execution** environment
+- **Consistent runtime** across different systems
+- **Security isolation** from the host system
+- **Reproducible environments** for testing
+
+**⚠️ Limited support** - may require debugging
+- **Slower startup** due to container initialization
+- **Additional complexity** in setup and maintenance
+- **Resource overhead** from containerization
+
+### Use Cases
+
+Docker execution might be suitable for:
+- **Security-sensitive environments** requiring isolation
+- **Multi-tenant applications** with untrusted code
+- **Consistent deployment environments** across teams
+- **Testing scenarios** requiring clean environments
+
+### Setup Requirements
+
+Docker execution requires additional setup:
+
+1. **Docker Installation**: Ensure Docker is installed and running
+2. **Container Configuration**: Set up appropriate Docker images
+3. **Volume Mounting**: Configure project directory access
+4. **Network Configuration**: Set up container networking if needed
+
+```bash
+# Example Docker setup (configuration may vary)
+docker build -t qckfx-agent-env .
+docker run -v $(pwd):/workspace qckfx-agent-env
+```
+
+## Remote Environment (Limited Support)
+
+<Info>
+**Limited Support**: The remote execution adapter (E2B integration) exists but is not actively maintained. Current schema restrictions only allow local execution.
+</Info>
+
+The remote adapter runs tools in cloud-based sandboxes:
+
+```typescript
+const agent = await Agent.create({
+  config: {
+    environment: { type: 'remote' },
+    // ... other config
+  },
+  callbacks: {
+    getRemoteId: async () => process.env.REMOTE_ID!
+  }
+});
+```
+
+### Characteristics
+
+**☁️ Cloud-based execution** in managed sandboxes
+- **Maximum isolation** from your local system
+- **Scalable infrastructure** managed by the provider
+- **Consistent environments** across different clients
+
+**⚠️ Limited support** and schema restrictions
+- **Network dependency** for all operations
+- **Latency overhead** for tool execution
+- **External service dependency** on cloud providers
+- **Additional costs** for cloud sandbox usage
+
+### Use Cases
+
+Remote execution could be useful for:
+- **Maximum security isolation** requirements
+- **Scalable multi-tenant applications**
+- **Environments without local compute resources**
+- **Compliance scenarios** requiring external execution
+
+## Environment Selection Guidelines
+
+<Tip>
+**Recommendation**: Use the local execution environment unless you have specific security or isolation requirements. It provides the best performance and is the only fully supported option.
+</Tip>
+
+Choose your environment based on your needs:
+
+### Local Environment
+- ✅ **Best for**: Development, testing, most production use cases
+- ✅ **When**: Performance is critical and security isolation isn't required
+- ✅ **Advantages**: Fast, simple, fully supported
+- ⚠️ **Consider**: Security implications of running tools with application permissions
+
+### Docker Environment  
+- ⚠️ **Best for**: Security-conscious environments willing to handle potential issues
+- ⚠️ **When**: Isolation is required and you can manage container complexity
+- ⚠️ **Advantages**: Security isolation, consistent environments
+- ❌ **Drawbacks**: Limited support, performance overhead, setup complexity
+
+### Remote Environment
+- ❌ **Not recommended**: Due to limited support and schema restrictions
+- ❌ **Current status**: Not actively maintained
+- ❌ **Limitations**: Schema only allows 'local' environment type
+
+## Execution Adapter Interface
+
+All environments implement the same `ExecutionAdapter` interface, ensuring consistent tool behavior:
+
+```typescript
+interface ExecutionAdapter {
+  executeCommand(id: string, command: string, workingDir?: string): Promise<CommandResult>;
+  readFile(id: string, filepath: string, options?: ReadOptions): Promise<FileContent>;
+  writeFile(id: string, filepath: string, content: string): Promise<void>;
+  editFile(id: string, filepath: string, searchCode: string, replaceCode: string): Promise<EditResult>;
+  listFiles(id: string, path: string, options?: ListOptions): Promise<FileList>;
+  findFiles(id: string, pattern: string, options?: FindOptions): Promise<FileList>;
+  searchFiles(id: string, pattern: string, options?: SearchOptions): Promise<SearchResults>;
+  // ... other methods
+}
+```
+
+This abstraction allows you to switch between environments without changing your agent code, though local execution is strongly recommended for reliability and support.
+
+## Performance Considerations
+
+### Local Environment Performance
+- **Fastest execution** with no overhead
+- **Direct file system access** for optimal I/O
+- **Native process execution** for commands
+- **Minimal memory footprint**
+
+### Docker Environment Performance
+- **Container startup overhead** for each session
+- **File system mounting** may impact I/O performance
+- **Network overhead** for container communication
+- **Additional memory usage** for container runtime
+
+### Remote Environment Performance
+- **Network latency** for all operations
+- **Bandwidth limitations** for large file operations
+- **Service availability** dependency
+- **Potential rate limiting** from cloud providers
+
+## Security Considerations
+
+### Local Environment Security
+- Tools run with **application permissions**
+- **Direct access** to file system and network
+- **No isolation** from host system
+- **Trust required** in tool implementations
+
+### Docker Environment Security
+- **Process isolation** from host system
+- **Limited file system access** through volume mounts
+- **Network isolation** capabilities
+- **Container escape** risks (though minimal)
+
+### Remote Environment Security
+- **Maximum isolation** from local system
+- **Managed security** by cloud provider
+- **Network-only attack surface**
+- **Data transmission** security considerations
+
+## Troubleshooting
+
+### Local Environment Issues
+- **Permission errors**: Check file system permissions
+- **Path issues**: Verify working directory settings
+- **Tool failures**: Check tool-specific error messages
+
+### Docker Environment Issues
+- **Container startup failures**: Check Docker configuration
+- **Volume mounting problems**: Verify path mappings
+- **Network connectivity**: Check container networking
+- **Image compatibility**: Ensure proper base images
+
+### Remote Environment Issues
+- **Connection failures**: Check network connectivity
+- **Authentication problems**: Verify API credentials
+- **Service availability**: Check provider status
+- **Rate limiting**: Monitor usage quotas
+
+## Migration Between Environments
+
+While the interface consistency allows for environment switching, consider these factors:
+
+### From Local to Docker
+- **Performance impact**: Expect slower execution
+- **Setup complexity**: Requires Docker configuration
+- **File path changes**: May need path adjustments
+- **Limited support**: Prepare for potential issues
+
+### From Local to Remote
+- **Currently not possible**: Schema restrictions prevent remote environment
+- **Future consideration**: May become available in future versions
+- **Network dependency**: Would require stable internet connection
+- **Cost implications**: Cloud sandbox usage fees
+
+## Best Practices
+
+### Local Environment
+- **Monitor permissions**: Be aware of what tools can access
+- **Validate inputs**: Sanitize tool parameters carefully
+- **Error handling**: Implement robust error recovery
+- **Resource monitoring**: Watch for resource usage
+
+### Docker Environment (if used)
+- **Container management**: Properly clean up containers
+- **Volume security**: Limit mounted directories
+- **Image maintenance**: Keep base images updated
+- **Resource limits**: Set appropriate container limits
+
+### General Recommendations
+- **Start with local**: Use local environment for development
+- **Test thoroughly**: Validate tool behavior in your chosen environment
+- **Monitor performance**: Track execution times and resource usage
+- **Plan for scaling**: Consider environment implications for production
+
+## Next Steps
+
+- Learn about [Agent Architecture](/concepts/agent) to understand how environments integrate with agents
+- Explore [Session Management](/concepts/sessions) to see how environments affect session state
+- Understand the [Tool System](/concepts/tools) to see how tools execute in different environments
+- Check out [Getting Started](/get-started) for practical environment setup examples
