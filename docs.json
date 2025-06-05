@@ -96,6 +96,14 @@
       "github": "https://github.com/qckfx",
       "linkedin": "https://linkedin.com/company/qckfx"
     }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
   }
 }
 
