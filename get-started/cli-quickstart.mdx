@@ -6,6 +6,24 @@ icon: "terminal"
 
 The qckfx CLI is a powerful headless AI coding assistant designed for terminal workflows, automation, and CI/CD pipelines. This guide will get you running your first AI coding task in minutes.
 
+<Accordion title="🚀 1-Minute TL;DR">
+**For senior devs who want to get started immediately:**
+
+1. **Install**: `npm install -g @qckfx/agent`
+2. **Initialize**: `qckfx init` (gets you our production agent configs)
+3. **Set API key**: `export LLM_API_KEY="your-key"` and `export LLM_BASE_URL="your-provider-url"`
+4. **Hello World**: `qckfx "Hello, world!"`
+5. **Real task**: `qckfx "What does this repository do?"`
+
+**Quick links for deeper exploration:**
+- [Advanced Configuration](/get-started/configuration) - Custom agent configs
+- [GitHub Actions Integration](/applications/github-actions) - CI/CD automation
+- [Sub-agents](/cli/sub-agents) - Specialized capabilities
+- [Troubleshooting](/get-started/troubleshooting) - Common issues
+
+**Pro tip**: Use `qckfx -c` to continue conversations, `qckfx -m model-name` to switch models mid-conversation, and `qckfx` (no arguments) for interactive mode with multi-line input and smart paste handling.
+</Accordion>
+
 ## System Requirements
 
 <CardGroup cols={2}>
@@ -130,6 +148,81 @@ qckfx -c "Add unit tests for the changes you just made"
   Sessions are saved per working directory, so you can have different ongoing conversations for different projects.
 </Tip>
 
+## Interactive Mode
+
+When you run `qckfx` without providing a prompt, the CLI enters **interactive mode** - a powerful feature that makes it easy to work with complex, multi-line inputs and pasted content.
+
+### Entering Interactive Mode
+
+Simply run the command without any arguments:
+
+```bash
+qckfx
+```
+
+You'll see an interactive prompt where you can compose your request:
+
+```
+> 
+```
+
+### Multi-line Input
+
+Create multi-line prompts by ending lines with a backslash (`\`):
+
+```
+> Analyze this codebase and create a comprehensive report that includes: \
+  - Architecture overview \
+  - Code quality assessment \
+  - Security considerations \
+  - Performance recommendations
+```
+
+The backslash tells qckfx that your input continues on the next line, allowing you to structure complex requests clearly.
+
+### Smart Paste Handling
+
+Interactive mode intelligently handles pasted content, similar to Claude Code. When you paste large blocks of text, qckfx automatically:
+
+1. **Detects the paste** and replaces it with a compact placeholder like `[paste #1 +25 lines]`
+2. **Keeps your buffer clean** so you can see your actual prompt structure
+3. **Substitutes the content at runtime** when you submit your request
+
+This makes it easy to include code snippets, error messages, or documentation in your prompts without cluttering the input buffer.
+
+#### Example Interactive Session
+
+```
+> I'm getting an error when running my tests. Here's the error output: \
+  [paste #1 +15 lines] \
+  \
+  And here's the relevant test file: \
+  [paste #2 +42 lines] \
+  \
+  Can you help me debug this issue?
+```
+
+### Submitting Your Request
+
+Press **Enter** to submit your interactive prompt (or **Ctrl+D** as an alternative). qckfx will process your request with all pasted content properly included.
+
+<Info>
+  If your current line ends with a backslash (`\`), pressing Enter will continue to the next line instead of submitting. Only lines that don't end with `\` will submit when you press Enter.
+</Info>
+
+### When to Use Interactive Mode
+
+Interactive mode is particularly useful for:
+
+- **Complex prompts** that span multiple lines
+- **Including code snippets** or error messages via paste
+- **Structured requests** with multiple requirements
+- **Exploratory conversations** where you want to compose thoughtfully
+
+<Tip>
+  Interactive mode is perfect for detailed code reviews, debugging sessions, and complex refactoring requests where you need to include multiple code snippets or detailed context.
+</Tip>
+
 ## Beyond Basics: Advanced Patterns
 
 ### Using Different Models for Different Tasks
@@ -189,10 +282,13 @@ qckfx -m openai/gpt-4o "Refactor the auth.js file"
 qckfx --url https://api.openai.com/v1 --api-key sk-... -m gpt-4o "Fix the tests"
 ```
 
-### Automation-Friendly Commands
+### Interactive vs Non-Interactive Modes
 
 ```bash
-# Non-interactive mode (good for scripts)
+# Interactive mode - for complex, multi-line prompts
+qckfx  # Enters interactive mode with paste handling
+
+# Non-interactive mode - for scripts and automation
 qckfx "commit my changes with a descriptive message"
 
 # Run with specific configuration
