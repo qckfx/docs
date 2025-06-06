@@ -37,7 +37,26 @@ npm install -g @qckfx/agent
   Do NOT use `sudo npm install -g` as this can lead to permission issues and security risks.
 </Warning>
 
-### 2. Set up your LLM provider
+### 2. Initialize your project with default agents
+
+Get started quickly with the same agents we use to develop qckfx:
+
+```bash
+qckfx init
+```
+
+This creates a `.qckfx` directory with essential agent configurations:
+- `advanced-agent.json` - General-purpose coding agent with browser sub-agent, uses OpenAI o3 for orchestration and Claude Code for implementation
+- `agent-editor.json` - Specialized for editing system prompts in agent configuration files
+- `commit.json` - Helps write good commit messages
+- `sub-agents/browser.json` - Codebase research capabilities using GPT-4.1-nano for cost-efficient local file analysis
+- `sub-agents/coder.json` - Advanced coding assistance
+
+<Tip>
+  The `init` command gives you the exact same agent configurations that the qckfx development team uses daily. It's the fastest way to get productive with qckfx.
+</Tip>
+
+### 3. Set up your LLM provider
 
 qckfx works with any OpenAI-compatible API. Set your environment variables:
 
@@ -69,7 +88,7 @@ export LLM_BASE_URL="http://localhost:8001/"
   Add these to your shell profile (`.bashrc`, `.zshrc`, etc.) to persist them across sessions.
 </Tip>
 
-### 3. Run your first command
+### 4. Run your first command
 
 ```bash
 qckfx "Hello, world!"
@@ -90,6 +109,72 @@ qckfx "Check for any obvious bugs or issues in the codebase"
 
 # Get help with specific files
 qckfx "Explain what the main entry point file does"
+```
+
+### Continuing Conversations
+
+qckfx automatically saves your conversation history. Use the `-c` flag to continue where you left off:
+
+```bash
+# Start a conversation
+qckfx "Analyze the auth.js file and identify potential improvements"
+
+# Continue the conversation later
+qckfx -c "Now implement those improvements you suggested"
+
+# Keep the conversation going
+qckfx -c "Add unit tests for the changes you just made"
+```
+
+<Tip>
+  Sessions are saved per working directory, so you can have different ongoing conversations for different projects.
+</Tip>
+
+## Beyond Basics: Advanced Patterns
+
+### Using Different Models for Different Tasks
+
+Mix models strategically - use powerful models for planning and cheaper ones for implementation:
+
+```bash
+# Use a powerful model for planning
+qckfx -m openai/o1 "Create a comprehensive plan for refactoring this auth system"
+
+# Use a cheaper model to implement the plan (continuing the session)
+qckfx -c -m openai/gpt-4o-mini "Implement the auth refactoring plan from above"
+```
+
+### Adding Specialized Capabilities with Sub-agents
+
+Sub-agents give your main agent specialized tools and capabilities:
+
+```bash
+# Add codebase research capabilities
+qckfx --with-subagent browser "Analyze the codebase structure and identify patterns"
+
+# Add multiple specialized agents for comprehensive analysis
+qckfx --with-subagent browser database "Analyze our data architecture and research modern alternatives"
+
+# Continue a conversation with sub-agents
+qckfx -c --with-subagent security "Now audit the security of the changes we discussed"
+```
+
+### Configuration Preview
+
+For complex workflows, create agent configuration files:
+
+```json
+// .qckfx/my-agent.json
+{
+  "defaultModel": "claude-sonnet-4",
+  "systemPrompt": "You are a senior full-stack developer specializing in secure, scalable applications.",
+  "tools": ["bash", "file_read", "file_write", "grep", "glob"]
+}
+```
+
+```bash
+# Use your custom agent
+qckfx -a my-agent "Review this codebase for security and performance issues"
 ```
 
 ## Common CLI Patterns
@@ -146,17 +231,23 @@ qckfx "commit my changes and create a pull request"
 ## Next Steps
 
 <CardGroup cols={2}>
+  <Card title="Troubleshooting" icon="wrench" href="/get-started/troubleshooting">
+    Solutions for common CLI installation and usage issues
+  </Card>
   <Card title="Advanced Configuration" icon="gear" href="/get-started/configuration">
-    Learn how to create custom agent configurations with JSON files
+    Create custom agent configurations with specialized tools and prompts
   </Card>
   <Card title="GitHub Actions" icon="robot" href="/applications/github-actions">
     Set up qckfx to run automatically in your CI/CD pipeline
   </Card>
-  <Card title="Troubleshooting" icon="wrench" href="/get-started/troubleshooting">
-    Solutions for common CLI installation and usage issues
+  <Card title="Sub-agent Quickstart" icon="puzzle-piece" href="/cli/sub-agents">
+    Add specialized capabilities like web research, security auditing, and database design
   </Card>
-  <Card title="Core Concepts" icon="book" href="/concepts/core-concepts">
-    Understand how qckfx agents work under the hood
+  <Card title="Mixed Model Workflows" icon="shuffle" href="/cli/advanced-patterns">
+    Use different models strategically within conversations for cost optimization
+  </Card>
+  <Card title="Agent Self-Improvement" icon="brain" href="/applications/agent-self-improvement">
+    Let agents analyze and improve their own system prompts automatically
   </Card>
 </CardGroup>
 

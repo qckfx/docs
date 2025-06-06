@@ -34,7 +34,7 @@ jobs:
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
         run: |
-          npx qckfx << 'EOF'
+          npx qckfx --quiet << 'EOF'
           Please review the changes in this pull request. Focus on:
           1. Code quality and best practices
           2. Potential bugs or security issues
@@ -346,6 +346,31 @@ npx qckfx --with-subagent security performance "Comprehensive analysis"
 
 # Validate agent configuration
 npx qckfx --validate my-agent.json
+
+# Quiet mode for CI/CD (recommended for GitHub Actions)
+npx qckfx --quiet "Clean output for automated workflows"
+npx qckfx -q --model claude-3-haiku-20240307 "Fast analysis with minimal output"
+```
+
+### The --quiet Flag for CI/CD
+
+The `--quiet` (or `-q`) flag is **highly recommended** for GitHub Actions and other CI/CD environments. It provides several benefits:
+
+- **Clean Logs**: Suppresses all output except the final response and errors
+- **Better Performance**: Reduces I/O overhead by eliminating progress indicators and verbose logging
+- **Easier Parsing**: Makes it simple to capture and process the AI's response in scripts
+- **Professional Output**: Provides clean, focused results perfect for automated workflows
+
+<Tip>
+Always use `--quiet` in GitHub Actions workflows to keep your action logs clean and focused on the actual AI analysis results.
+</Tip>
+
+```bash
+# ✅ Recommended for GitHub Actions
+npx qckfx --quiet "Analyze this pull request for security issues"
+
+# ❌ Not recommended for CI/CD (too verbose)
+npx qckfx "Analyze this pull request for security issues"
 ```
 
 ### Environment Variables
@@ -371,9 +396,9 @@ env:
 Specify models based on your needs and budget:
 
 ```bash
-npx qckfx --model gemini-2.5-pro  # Default, balanced performance
-npx qckfx --model claude-3-haiku-20240307  # Faster, cheaper
-npx qckfx --model claude-3-5-sonnet-20241022  # Better quality
+npx qckfx --quiet --model gemini-2.5-pro  # Default, balanced performance
+npx qckfx --quiet --model claude-3-haiku-20240307  # Faster, cheaper
+npx qckfx --quiet --model claude-3-5-sonnet-20241022  # Better quality
 ```
 
 ### 3. Limit Scope with Prompts

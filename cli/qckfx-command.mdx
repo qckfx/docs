@@ -10,6 +10,7 @@ The `qckfx` command is the primary interface for running AI agents from the comm
 
 ```bash
 qckfx [options] [prompt...]
+qckfx init
 ```
 
 ## Options
@@ -49,6 +50,12 @@ qckfx [options] [prompt...]
   Add one or more sub-agent tools for this execution. Sub-agents are resolved from `.qckfx/sub-agents/<name>.json`.
 </ParamField>
 
+### Output Control
+
+<ParamField path="-q, --quiet" type="boolean">
+  Suppress all output except the final response or errors. Perfect for CI/CD environments and GitHub Actions where you want clean, minimal output. When using this flag, a prompt must be provided as arguments since interactive mode is disabled.
+</ParamField>
+
 ### Validation
 
 <ParamField path="-v, --validate <file>" type="string">
@@ -61,7 +68,41 @@ qckfx [options] [prompt...]
   The prompt to send to the agent. If not provided, the CLI will enter interactive mode.
 </ParamField>
 
+## Commands
+
+### init
+
+The `init` command sets up a new project with default agent configurations:
+
+```bash
+qckfx init
+```
+
+This command:
+- Creates a `.qckfx` directory in the current working directory
+- Installs essential agent configurations used by the qckfx development team:
+  - `advanced-agent.json` - General-purpose coding agent with browser sub-agent, uses OpenAI o3 for orchestration and Claude Code for implementation
+  - `agent-editor.json` - Specialized for editing system prompts in agent configuration files
+  - `commit.json` - Helps write good commit messages
+  - `sub-agents/browser.json` - Codebase research capabilities using GPT-4.1-nano for cost-efficient local file analysis
+  - `sub-agents/coder.json` - Advanced coding assistance
+
+<Tip>
+  The `init` command is the fastest way to get started with qckfx. It gives you the same agent configurations that the qckfx team uses for daily development.
+</Tip>
+
+<Warning>
+  If a `.qckfx` directory already exists, the `init` command will overwrite existing files with the same names.
+</Warning>
+
 ## Examples
+
+### Project Initialization
+
+```bash
+# Initialize a new project with default agents
+qckfx init
+```
 
 ### Basic Usage
 
@@ -113,13 +154,13 @@ qckfx -c -m claude-sonnet-4 "Use a more powerful model for this"
 
 ```bash
 # Add a single sub-agent
-qckfx --with-subagent browser "Research the latest React patterns"
+qckfx --with-subagent browser "Analyze the codebase structure and identify patterns"
 
 # Add multiple sub-agents
 qckfx --with-subagent browser database "Analyze our data architecture"
 
 # Combine with agent config
-qckfx -a my-agent --with-subagent browser "Enhanced analysis with web research"
+qckfx -a my-agent --with-subagent browser "Enhanced analysis with codebase research"
 ```
 
 ### API Configuration
@@ -133,6 +174,19 @@ qckfx --url http://localhost:8001 "Use local proxy"
 
 # Combine both
 qckfx --api-key sk-key --url http://localhost:8001 "Custom setup"
+```
+
+### Quiet Mode for CI/CD
+
+```bash
+# Clean output for CI/CD environments
+qckfx --quiet "Analyze the codebase for security issues"
+
+# Combine with other options for automated workflows
+qckfx -q -a security-agent "Scan for vulnerabilities"
+
+# Perfect for GitHub Actions and automated scripts
+qckfx --quiet --model claude-3-haiku-20240307 "Quick code review"
 ```
 
 ## Interactive Mode
@@ -198,3 +252,4 @@ If session loading fails when using `--continue`, the CLI will warn you but star
 - Leverage sub-agents for specialized tasks instead of complex prompts
 - Validate configurations with `--validate` before deployment
 - Use shorter model names when possible (e.g., `claude-sonnet-4` vs full model IDs)
+- Use `--quiet` in CI/CD environments to reduce log noise and improve performance
