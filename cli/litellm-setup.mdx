@@ -40,8 +40,6 @@ docker run -p 8001:8001 \
   -e OPENAI_API_KEY=your_openai_key \
   -e ANTHROPIC_API_KEY=your_anthropic_key \
   -e GEMINI_API_KEY=your_gemini_key \
-  -e MISTRAL_API_KEY=your_mistral_key \
-  -e GROQ_API_KEY=your_groq_key \
   litellm
 ```
 
@@ -85,18 +83,7 @@ The included LiteLLM configuration supports these models out of the box:
 |------------|----------------|-------------|
 | `gemini-2.5-pro` | `gemini/gemini-2.5-pro-preview-03-25` | Gemini 2.5 Pro |
 
-### Mistral Models
 
-| Model Name | Provider Model | Description |
-|------------|----------------|-------------|
-| `devstral-small` | `mistral/devstral-small-2505` | Devstral Small |
-
-### Groq Models
-
-| Model Name | Provider Model | Description |
-|------------|----------------|-------------|
-| `llama-3.1-8b` | `groq/llama-3.1-8b-instant` | Llama 3.1 8B |
-| `qwen-32b` | `groq/qwen-qwq-32b` | Qwen QwQ 32B |
 
 ## Configuration File
 
@@ -156,8 +143,6 @@ LiteLLM reads API keys from environment variables:
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
 export GEMINI_API_KEY=...
-export MISTRAL_API_KEY=...
-export GROQ_API_KEY=gsk_...
 ```
 
 <Warning>
@@ -216,8 +201,6 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
-      - GROQ_API_KEY=${GROQ_API_KEY}
     restart: unless-stopped
     volumes:
       - ./config.yaml:/app/config.yaml:ro
