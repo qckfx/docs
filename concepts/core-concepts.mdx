@@ -61,6 +61,38 @@ The **Agent** serves as the central orchestrator, managing all interactions:
 - Isolation options for security-sensitive scenarios
 - Consistent interfaces across different deployment models
 
+## High Level Data & Control Flow
+
+```mermaid
+---
+config:
+  layout: dagre
+  look: handDrawn
+---
+flowchart TD
+ subgraph subGraph0["Shadow Commit"]
+        G1["Snapshot Git State"]
+        G["Create Shadow Commit"]
+        G2["Create Tagged Commit"]
+        G3["Bundle for Rollback"]
+  end
+    A["User Request"] --> B["AgentEngine"]
+    B --> C["FSM Driver"]
+    C --> D["Model Call"]
+    D --> E{"Tool Needed?"}
+    E -- No --> F["Final Response"]
+    E -- Yes --> G
+    G --> H["Execute Tool"] & G1
+    H --> I["Add Result to Context"]
+    I --> D
+    F --> J["Return to User"]
+    G1 --> G2
+    G2 --> G3
+    style G fill:#23211E
+    style A fill:#1A1A23
+    style J fill:#141914
+```
+
 ## Quick Start Example
 
 Here's how all four concepts work together in a simple example:
