@@ -6,6 +6,28 @@ icon: "code"
 
 The qckfx SDK is a TypeScript/JavaScript library that lets you embed powerful AI coding agents directly into your applications. This guide will get you building with AI agents in minutes.
 
+<Accordion title="🚀 1-Minute TL;DR">
+**For senior devs who want to get started immediately:**
+
+1. **Install**: `npm install @qckfx/agent`
+2. **Set API key**: `LLM_API_KEY=your-key` and `LLM_BASE_URL=your-provider-url` in `.env`
+3. **Hello World**: 
+   ```typescript
+   import { Agent } from '@qckfx/agent';
+   const agent = new Agent({ defaultModel: 'anthropic/claude-sonnet-4', systemPrompt: 'You are a helpful coding assistant.', environment: { type: 'local' } });
+   const result = await agent.processQuery('Hello, world!');
+   ```
+4. **Real integration**: See [Web App Example](#web-application-integration) or [Node.js Service](#nodejs-service-integration)
+
+**Quick links for deeper exploration:**
+- [SDK API Reference](/sdk/api-reference) - Complete method documentation
+- [Agent Configuration](/sdk/configuration) - Advanced config options
+- [Built-in Tools](/sdk/tools) - Available agent capabilities
+- [Core Concepts](/concepts/core-concepts) - Architecture understanding
+
+**Pro tip**: Use event handlers for responsive UIs and different environments (local/docker/remote) for security.
+</Accordion>
+
 ## Installation
 
 Install the SDK as a dependency in your project:
